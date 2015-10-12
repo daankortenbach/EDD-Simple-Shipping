@@ -168,11 +168,15 @@ class EDD_Simple_Shipping {
 			add_action( 'edd_payment_receipt_after', array( $this, 'payment_receipt_after' ), 10, 2 );
 			add_action( 'edd_toggle_shipped_status', array( $this, 'frontend_toggle_shipped_status' ) );
 
-			add_action( 'fes_custom_post_button', array( $this, 'edd_fes_simple_shipping_field_button' ) );
-			add_action( 'fes_admin_field_edd_simple_shipping', array( $this, 'edd_fes_simple_shipping_admin_field' ), 10, 3 );
-			add_filter( 'fes_formbuilder_custom_field', array( $this, 'edd_fes_simple_shipping_formbuilder_is_custom_field' ), 10, 2 );
-			add_action( 'fes_submit_submission_form_bottom', array( $this, 'edd_fes_simple_shipping_save_custom_fields' ) );
-			add_action( 'fes_render_field_edd_simple_shipping', array( $this, 'edd_fes_simple_shipping_field' ), 10, 3 );
+			if ( version_compare( fes_plugin_version, '2.3', '>=' ) ) {
+				add_action( 'fes_load_fields_require',  array( $this, 'edd_fes_simple_shipping' ) );
+			} else {
+				add_action( 'fes_custom_post_button', array( $this, 'edd_fes_simple_shipping_field_button' ) );
+				add_action( 'fes_admin_field_edd_simple_shipping', array( $this, 'edd_fes_simple_shipping_admin_field' ), 10, 3 );
+				add_filter( 'fes_formbuilder_custom_field', array( $this, 'edd_fes_simple_shipping_formbuilder_is_custom_field' ), 10, 2 );
+				add_action( 'fes_submit_submission_form_bottom', array( $this, 'edd_fes_simple_shipping_save_custom_fields' ) );
+				add_action( 'fes_render_field_edd_simple_shipping', array( $this, 'edd_fes_simple_shipping_field' ), 10, 3 );
+			}
 
 		}
 
@@ -1499,6 +1503,14 @@ class EDD_Simple_Shipping {
 		exit();
 	}
 
+	function edd_fes_simple_shipping(){
+		require_once dirname( __FILE__ ) . 'shipping-field.php';
+		add_filter(  'fes_load_fields_array', 'edd_fes_simple_shipping_add_field', 10, 1 );
+		function edd_fes_simple_shipping_add_field( $fields ){
+			$fields['edd_simple_shipping'] = 'FES_Simple_Shipping_Field';
+			return $fields;
+		}
+	}
 
 
 	/**
