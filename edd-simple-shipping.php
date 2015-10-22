@@ -1432,7 +1432,7 @@ class EDD_Simple_Shipping {
 		echo '<td>' . self::format_address( $user_info, $address ) . '<td>';
 		echo '</tr>';
 
-		if( current_user_can( 'edit_shop_payments' ) || current_user_can( 'frontend_vendor' ) ) {
+		if( current_user_can( 'edit_shop_payments' ) || ( function_exists( 'EDD_FES' ) && EDD_FES()->vendors->vendor_is_vendor() ) ) {
 
 			echo '<tr>';
 			echo '<td colspan="2">';
