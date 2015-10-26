@@ -1504,11 +1504,13 @@ class EDD_Simple_Shipping {
 	}
 
 	function edd_fes_simple_shipping(){
-		require_once dirname( __FILE__ ) . 'shipping-field.php';
-		add_filter(  'fes_load_fields_array', 'edd_fes_simple_shipping_add_field', 10, 1 );
-		function edd_fes_simple_shipping_add_field( $fields ){
-			$fields['edd_simple_shipping'] = 'FES_Simple_Shipping_Field';
-			return $fields;
+		if ( version_compare( fes_plugin_version, '2.3', '>=' ) ) {
+			require_once dirname( __FILE__ ) . '/shipping-field.php';
+			add_filter(  'fes_load_fields_array', 'edd_fes_simple_shipping_add_field', 10, 1 );
+			function edd_fes_simple_shipping_add_field( $fields ){
+				$fields['edd_simple_shipping'] = 'FES_Simple_Shipping_Field';
+				return $fields;
+			}
 		}
 	}
 

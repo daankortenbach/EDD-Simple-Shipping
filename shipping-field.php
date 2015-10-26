@@ -6,7 +6,8 @@ class FES_Simple_Shipping_Field extends FES_Field {
 
 	/** @var array Supports are things that are the same for all fields of a field type. Like whether or not a field type supports jQuery Phoenix. Stored in obj, not db. */
 	public $supports = array(
-		'multiple'    => true,
+		'multiple'    => false,
+		'is_meta'     => true,  // in object as public (bool) $meta;
 		'forms'       => array(
 			'registration'     => false,
 			'submission'       => true,
@@ -29,7 +30,6 @@ class FES_Simple_Shipping_Field extends FES_Field {
 	public $characteristics = array(
 		'name'        => 'edd_simple_shipping',
 		'template'	  => 'edd_simple_shipping',
-		'is_meta'     => true,  // in object as public (bool) $meta;
 		'public'      => false,
 		'required'    => true,
 		'label'       => 'Shipping',
@@ -48,7 +48,7 @@ class FES_Simple_Shipping_Field extends FES_Field {
 	}
 
 	public function set_title() {
-		$title = _x( 'Shipping', 'FES Field title translation', 'edd_fes' );
+		$title = _x( 'Shipping', 'FES Field title translation', 'edd-simple-shipping' );
 		$title = apply_filters( 'fes_' . $this->name() . '_field_title', $title );
 		$this->supports['title'] = $title;		
 	}
@@ -85,8 +85,12 @@ class FES_Simple_Shipping_Field extends FES_Field {
         $output        .= sprintf( '<fieldset class="fes-el %s%s">', $el_name, $class_name );
         $output    	   .= $this->label( $readonly );
 		$enabled       = get_post_meta( $this->save_id, '_edd_enable_shipping', true );
-		$domestic      = get_post_meta( $this->save_id, '_edd_shipping_domestic', true );
+
+		$domestic 	   = get_post_meta( $this->save_id, '_edd_shipping_domestic', true );
+		$domestic      = edd_format_amount( esc_attr( $domestic ) );
+
 		$international = get_post_meta( $this->save_id, '_edd_shipping_international', true );
+		$international = edd_format_amount( esc_attr( $international ) );
         ob_start(); ?>
 		<style>
 		div.fes-form fieldset .fes-fields.edd_simple_shipping label { width: 100%; display:block; }
@@ -94,10 +98,12 @@ class FES_Simple_Shipping_Field extends FES_Field {
 		div.fes-form fieldset .fes-fields .edd-shipping-field { width: 45%; display:inline-block; }
 		</style>
 		<div class="fes-fields <?php echo sanitize_key( $this->name()); ?>">
+			<?php if ( ! $this->required() ) { ?>
 			<label for="edd_simple_shipping[enabled]">
 				<input type="checkbox" name="edd_simple_shipping[enabled]" id="edd_simple_shipping[enabled]" value="1"<?php checked( '1', $enabled ); ?>/>
 				<?php _e( 'Enable Shipping', 'edd-simple-shipping' ); ?>
 			</label>
+			<?php } ?>
 			<div class="edd-fes-shipping-fields">
 				<label for="edd_simple_shipping[domestic]"><?php _e( 'Domestic', 'edd-simple-shipping' ); ?></label>
 				<label for="edd_simple_shipping[international]"><?php _e( 'International', 'edd-simple-shipping' ); ?></label>
@@ -111,11 +117,54 @@ class FES_Simple_Shipping_Field extends FES_Field {
 		return $output;
 	}
 
+	public function display_field( $user_id = -2, $single = false ) {
+		if ( $user_id === -2 ) {
+			$user_id = get_current_user_id();
+		}
+		$user_id   = apply_filters( 'fes_display_' . $this->template() . '_field_user_id', $user_id, $this->id );
+		$value     = $this->get_field_value_frontend( $this->save_id, $user_id );
+		ob_start(); ?>
+
+			<?php if ( $single ) { ?>
+			<table class="fes-display-field-table">
+			<?php } ?>
+
+				<tr class="fes-display-field-row <?php echo $this->template(); ?>" id="<?php echo $this->name(); ?>">
+					<td class="fes-display-field-label"><?php echo $this->get_label(); ?></td>
+					<td class="fes-display-field-values">
+						<?php
+						echo '';
+						?>
+					</td>
+				</tr>
+			<?php if ( $single ) { ?>
+			</table>
+			<?php } ?>
+		<?php
+		return ob_get_clean();
+	}
+
+	public function formatted_data( $user_id = -2 ) {
+		if ( $user_id === -2 ) {
+			$user_id = get_current_user_id();
+		}
+
+		$user_id   = apply_filters( 'fes_fomatted_' . $this->template() . '_field_user_id', $user_id, $this->id );
+		$values     = $this->get_field_value_frontend( $this->save_id, $user_id );
+		$output    = '';
+		return $output;
+	}	
+
 	/** Returns the HTML to render a field for the formbuilder */
-	public function render_formbuilder_field( $index ) {
+	public function render_formbuilder_field( $index = -2, $insert = false ) {
 		$removable = $this->can_remove_from_formbuilder();
 		ob_start(); ?>
         <li class="edd_simple_shipping">
+			<style>
+				div.fes-form fieldset .fes-fields.edd_simple_shipping label { width: 100%; display:block; }
+				div.fes-form fieldset .fes-fields.edd_simple_shipping .edd-fes-shipping-fields label { width: 45%; display:inline-block; }
+				div.fes-form fieldset .fes-fields .edd-shipping-field { width: 45%; display:inline-block; }
+			</style>
             <?php $this->legend( $this->title(), $this->get_label(), $removable ); ?>
             <?php FES_Formbuilder_Templates::hidden_field( "[$index][template]", $this->template() ); ?>
 
@@ -130,14 +179,24 @@ class FES_Simple_Shipping_Field extends FES_Field {
 
 	public function validate( $values = array(), $save_id = -2, $user_id = -2 ) {
         $name = $this->name();
-		if ( !empty( $values[ $name ] ) ){
-			// if the value is set
-				// no specific validation
-		} else { 
-			// if the field is required but isn't present
-			if ( $this->required() ){
-				return __( 'Please fill out this field.', 'edd_fes' );
+		if ( $this->required() ){
+			$values[ $name ]['enabled'] = '1';
+			if ( isset( $values[ $name ]['domestic'] ) ) {
+				return __( 'Please enter your domestic shipping price.', 'edd-simple-shipping' );
 			}
+			if ( isset( $values[ $name ]['international'] ) ) {
+				return __( 'Please enter your international shipping price.', 'edd-simple-shipping' );
+			}
+		} else {
+			if ( !empty( $values[ $name ]['enabled'] ) ) {
+				if ( ! isset( $values[ $name ]['domestic'] ) ) {
+					return __( 'Please enter your domestic shipping price.', 'edd-simple-shipping' );
+				}
+				if ( ! isset( $values[ $name ]['international'] ) ) {
+					return __( 'Please enter your international shipping price.', 'edd-simple-shipping' );
+				}
+			}
+				
 		}
         return apply_filters( 'fes_validate_' . $this->template() . '_field', false, $values, $name, $save_id, $user_id );
 	}
@@ -145,9 +204,49 @@ class FES_Simple_Shipping_Field extends FES_Field {
 	public function sanitize( $values = array(), $save_id = -2, $user_id = -2 ){
         $name = $this->name();
 		if ( !empty( $values[ $name ] ) ){
-			$values[ $name ] = trim( $values[ $name ] );
-			$values[ $name ] = sanitize_text_field( $values[ $name ] );
+			if ( $this->required() ) { 
+				$values[ $name ]['enabled'] = '1';
+			}
+
+			if ( ! empty( $values[ $name ]['domestic'] ) ) {
+				$values[ $name ]['domestic'] = edd_sanitize_amount( trim( $values[ $name ]['domestic'] ) );
+			} else {
+				$values[ $name ]['domestic'] = '0';
+			}
+
+			if ( ! empty( $values[ $name ]['international'] ) ) {
+				$values[ $name ]['international'] = edd_sanitize_amount( trim( $values[ $name ]['international'] ) );
+			} else {
+				$values[ $name ]['international'] = '0';
+			}
 		}
 		return apply_filters( 'fes_sanitize_' . $this->template() . '_field', $values, $name, $save_id, $user_id );
+	}
+
+	public function save_field_frontend( $save_id = -2, $value = array(), $user_id = -2 ) {
+		if ( $user_id === -2 ) {
+			$user_id = get_current_user_id();
+		}
+
+		if ( $save_id == -2 || $save_id < 1 ) {
+			$save_id = $this->save_id;
+		}
+
+		if ( isset( $value['enabled'] ) ) {
+			update_post_meta( $save_id, '_edd_enable_shipping', $value['enabled'] );
+			update_post_meta( $save_id, '_edd_shipping_domestic', $value['domestic'] );
+			update_post_meta( $save_id, '_edd_shipping_international', $value['international']  );
+
+			$prices = edd_get_variable_prices( $save_id );
+			if( ! empty( $prices ) ) {
+				foreach( $prices as $price_id => $price ) {
+					$prices[ $price_id ]['shipping'] = '1';
+				}
+				update_post_meta( $save_id, 'edd_variable_prices', $prices );
+			}
+		} else {
+			delete_post_meta( $save_id, '_edd_enable_shipping' );
+		}
+
 	}
 }
