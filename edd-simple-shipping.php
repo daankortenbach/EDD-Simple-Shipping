@@ -31,7 +31,7 @@ class EDD_Simple_Shipping {
 	 *
 	 * @access protected
 	 */
-	protected $is_fes = true;
+	protected $is_fes = false;
 
 	/**
 	 * Get active object instance
