@@ -82,11 +82,11 @@ class EDD_Simple_Shipping {
 
 		global $edd_options;
 
+		// Check for dependent plugins
+		$this->plugins_check();
+
 		// internationalization
 		add_action( 'init', array( $this, 'textdomain' ) );
-
-		// Check for dependent plugins
-		add_action( 'plugins_loaded', array( $this, 'plugins_check' ) );
 
 		// register our license key settings
 		add_filter( 'edd_settings_general', array( $this, 'settings' ), 1 );
@@ -217,7 +217,7 @@ class EDD_Simple_Shipping {
 	 * @access private
 	 * @return void
 	 */
-	public static function plugins_check() {
+	public function plugins_check() {
 
 		if( class_exists( 'EDD_Front_End_Submissions' ) ) {
 			$this->is_fes = true;
@@ -1654,4 +1654,4 @@ class EDD_Simple_Shipping {
 function edd_simple_shipping_load() {
 	$edd_simple_shipping = new EDD_Simple_Shipping();
 }
-add_action( 'plugins_loaded', 'edd_simple_shipping_load' );
+add_action( 'plugins_loaded', 'edd_simple_shipping_load', 0 );
