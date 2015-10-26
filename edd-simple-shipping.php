@@ -82,11 +82,11 @@ class EDD_Simple_Shipping {
 
 		global $edd_options;
 
+		// Check for dependent plugins
+		$this->plugins_check();
+
 		// internationalization
 		add_action( 'init', array( $this, 'textdomain' ) );
-
-		// Check for dependent plugins
-		add_action( 'plugins_loaded', array( $this, 'plugins_check' ) );
 
 		// register our license key settings
 		add_filter( 'edd_settings_general', array( $this, 'settings' ), 1 );
@@ -168,11 +168,15 @@ class EDD_Simple_Shipping {
 			add_action( 'edd_payment_receipt_after', array( $this, 'payment_receipt_after' ), 10, 2 );
 			add_action( 'edd_toggle_shipped_status', array( $this, 'frontend_toggle_shipped_status' ) );
 
-			add_action( 'fes_custom_post_button', array( $this, 'edd_fes_simple_shipping_field_button' ) );
-			add_action( 'fes_admin_field_edd_simple_shipping', array( $this, 'edd_fes_simple_shipping_admin_field' ), 10, 3 );
-			add_filter( 'fes_formbuilder_custom_field', array( $this, 'edd_fes_simple_shipping_formbuilder_is_custom_field' ), 10, 2 );
-			add_action( 'fes_submit_submission_form_bottom', array( $this, 'edd_fes_simple_shipping_save_custom_fields' ) );
-			add_action( 'fes_render_field_edd_simple_shipping', array( $this, 'edd_fes_simple_shipping_field' ), 10, 3 );
+			if ( version_compare( fes_plugin_version, '2.3', '>=' ) ) {
+				add_action( 'fes_load_fields_require',  array( $this, 'edd_fes_simple_shipping' ) );
+			} else {
+				add_action( 'fes_custom_post_button', array( $this, 'edd_fes_simple_shipping_field_button' ) );
+				add_action( 'fes_admin_field_edd_simple_shipping', array( $this, 'edd_fes_simple_shipping_admin_field' ), 10, 3 );
+				add_filter( 'fes_formbuilder_custom_field', array( $this, 'edd_fes_simple_shipping_formbuilder_is_custom_field' ), 10, 2 );
+				add_action( 'fes_submit_submission_form_bottom', array( $this, 'edd_fes_simple_shipping_save_custom_fields' ) );
+				add_action( 'fes_render_field_edd_simple_shipping', array( $this, 'edd_fes_simple_shipping_field' ), 10, 3 );
+			}
 
 		}
 
@@ -213,7 +217,7 @@ class EDD_Simple_Shipping {
 	 * @access private
 	 * @return void
 	 */
-	public static function plugins_check() {
+	public function plugins_check() {
 
 		if( class_exists( 'EDD_Front_End_Submissions' ) ) {
 			$this->is_fes = true;
@@ -1428,7 +1432,7 @@ class EDD_Simple_Shipping {
 		echo '<td>' . self::format_address( $user_info, $address ) . '<td>';
 		echo '</tr>';
 
-		if( current_user_can( 'edit_shop_payments' ) || current_user_can( 'frontend_vendor' ) ) {
+		if( current_user_can( 'edit_shop_payments' ) || ( function_exists( 'EDD_FES' ) && EDD_FES()->vendors->vendor_is_vendor() ) ) {
 
 			echo '<tr>';
 			echo '<td colspan="2">';
@@ -1499,6 +1503,16 @@ class EDD_Simple_Shipping {
 		exit();
 	}
 
+	function edd_fes_simple_shipping(){
+		if ( version_compare( fes_plugin_version, '2.3', '>=' ) ) {
+			require_once dirname( __FILE__ ) . '/shipping-field.php';
+			add_filter(  'fes_load_fields_array', 'edd_fes_simple_shipping_add_field', 10, 1 );
+			function edd_fes_simple_shipping_add_field( $fields ){
+				$fields['edd_simple_shipping'] = 'FES_Simple_Shipping_Field';
+				return $fields;
+			}
+		}
+	}
 
 
 	/**
@@ -1640,4 +1654,4 @@ class EDD_Simple_Shipping {
 function edd_simple_shipping_load() {
 	$edd_simple_shipping = new EDD_Simple_Shipping();
 }
-add_action( 'plugins_loaded', 'edd_simple_shipping_load' );
+add_action( 'plugins_loaded', 'edd_simple_shipping_load', 0 );
