@@ -50,9 +50,9 @@ class FES_Simple_Shipping_Field extends FES_Field {
 	public function set_title() {
 		$title = _x( 'Shipping', 'FES Field title translation', 'edd-simple-shipping' );
 		$title = apply_filters( 'fes_' . $this->name() . '_field_title', $title );
-		$this->supports['title'] = $title;		
+		$this->supports['title'] = $title;
 	}
-	
+
 	public function exclude_from_admin( $fields ){
 		array_push( $fields, 'edd_simple_shipping' );
 		return $fields;
@@ -77,10 +77,10 @@ class FES_Simple_Shipping_Field extends FES_Field {
 		$readonly  = apply_filters( 'fes_render_edd_simple_shipping_field_readonly_frontend', $readonly, $user_id, $this->id );
 		$value     = $this->get_field_value_frontend( $this->save_id, $user_id, $readonly );
 		$required  = $this->required( $readonly );
-        
+
         $el_name       = $this->name();
         $class_name    = $this->css();
-        
+
         $output        = '';
         $output        .= sprintf( '<fieldset class="fes-el %s%s">', $el_name, $class_name );
         $output    	   .= $this->label( $readonly );
@@ -153,7 +153,7 @@ class FES_Simple_Shipping_Field extends FES_Field {
 		$values     = $this->get_field_value_frontend( $this->save_id, $user_id );
 		$output    = '';
 		return $output;
-	}	
+	}
 
 	/** Returns the HTML to render a field for the formbuilder */
 	public function render_formbuilder_field( $index = -2, $insert = false ) {
@@ -181,10 +181,10 @@ class FES_Simple_Shipping_Field extends FES_Field {
         $name = $this->name();
 		if ( $this->required() ){
 			$values[ $name ]['enabled'] = '1';
-			if ( isset( $values[ $name ]['domestic'] ) ) {
+			if ( ! isset( $values[ $name ]['domestic'] ) ) {
 				return __( 'Please enter your domestic shipping price.', 'edd-simple-shipping' );
 			}
-			if ( isset( $values[ $name ]['international'] ) ) {
+			if ( ! isset( $values[ $name ]['international'] ) ) {
 				return __( 'Please enter your international shipping price.', 'edd-simple-shipping' );
 			}
 		} else {
@@ -196,15 +196,15 @@ class FES_Simple_Shipping_Field extends FES_Field {
 					return __( 'Please enter your international shipping price.', 'edd-simple-shipping' );
 				}
 			}
-				
+
 		}
         return apply_filters( 'fes_validate_' . $this->template() . '_field', false, $values, $name, $save_id, $user_id );
 	}
-	
+
 	public function sanitize( $values = array(), $save_id = -2, $user_id = -2 ){
         $name = $this->name();
 		if ( !empty( $values[ $name ] ) ){
-			if ( $this->required() ) { 
+			if ( $this->required() ) {
 				$values[ $name ]['enabled'] = '1';
 			}
 
