@@ -88,8 +88,11 @@ class EDD_Simple_Shipping {
 		// internationalization
 		add_action( 'init', array( $this, 'textdomain' ) );
 
+		// register settings section
+		add_filter( 'edd_settings_sections_extensions', array( $this, 'settings_section' ) );
+
 		// register our license key settings
-		add_filter( 'edd_settings_general', array( $this, 'settings' ), 1 );
+		add_filter( 'edd_settings_extensions', array( $this, 'settings' ), 1 );
 
 		// Add the meta box fields to Download Configuration
 		add_action( 'edd_meta_box_fields', array( $this, 'metabox' ), 10 );
@@ -1287,7 +1290,20 @@ class EDD_Simple_Shipping {
 	}
 
 	/**
-	 * Add our extension settings
+	 * Add Simple Shipping settings section
+	 *
+	 * @since 2.2.2
+	 *
+	 * @access public
+	 * @return array
+	 */
+	public function settings_section( $sections ) {
+		$sections['edd-simple-shipping-settings'] = __( 'Simple Shipping', 'edd-simple-shipping' );
+		return $sections;
+	}
+
+	/**
+	 * Add Simple Shipping settings
 	 *
 	 * @since 1.0
 	 *
@@ -1295,7 +1311,7 @@ class EDD_Simple_Shipping {
 	 * @return array
 	 */
 	public function settings( $settings ) {
-		$license_settings = array(
+		$simple_shipping_settings = array(
 			array(
 				'id' => 'edd_simple_shipping_license_header',
 				'name' => '<strong>' . __( 'Simple Shipping', 'edd-simple-shipping' ) . '</strong>',
@@ -1312,7 +1328,11 @@ class EDD_Simple_Shipping {
 			)
 		);
 
-		return array_merge( $settings, $license_settings );
+		if ( version_compare( EDD_VERSION, 2.5, '>=' ) ) {
+			$simple_shipping_settings = array( 'edd-simple-shipping-settings' => $simple_shipping_settings );
+		}
+
+		return array_merge( $settings, $simple_shipping_settings );
 	}
 
 	/**
