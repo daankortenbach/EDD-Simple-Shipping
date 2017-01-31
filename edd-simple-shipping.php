@@ -6,10 +6,11 @@ Description: Provides the ability to charge simple shipping fees for physical pr
 Version: 2.2.2
 Author: Easy Digital Downloads
 Author URI:  https://easydigitaldownloads.com
-Contributors: mordauk
+Contributors: easydigitaldownloads, mordauk, cklosows
 Text Domain: edd-simple-shipping
 Domain Path: languages
 */
+if ( ! defined( 'ABSPATH' ) ) { exit; }
 
 class EDD_Simple_Shipping {
 
@@ -33,6 +34,13 @@ class EDD_Simple_Shipping {
 	 */
 	protected $is_fes = false;
 
+	protected $plugin_path = null;
+	protected $plugin_url  = null;
+
+	protected $settings;
+	protected $metabox;
+	protected $admin;
+
 	/**
 	 * Get active object instance
 	 *
@@ -51,21 +59,48 @@ class EDD_Simple_Shipping {
 	}
 
 	/**
-	 * Class constructor.  Includes constants, includes and init method.
-	 *
-	 * @since 1.0
-	 *
-	 * @access public
-	 * @return void
+	 * Initialise the rest of the plugin
 	 */
-	public function __construct() {
+	private function __construct() {
 
-		define( 'EDD_SIMPLE_SHIPPING_VERSION', '2.2.2' );
+		// do nothing if EDD is not activated
+		if( ! class_exists( 'Easy_Digital_Downloads', false ) ) {
+			return;
+		}
 
+		$this->plugin_path = untrailingslashit( plugin_dir_path( __FILE__ ) );
+		$this->plugin_url  = untrailingslashit( plugin_dir_url( __FILE__ ) );
+		$this->setup_constants();
+		$this->filters();
+		$this->actions();
 		$this->init();
-
 	}
 
+	private function setup_constants() {
+		if ( ! defined( 'EDD_SIMPLE_SHIPPING_VERSION' ) ) {
+			define( 'EDD_SIMPLE_SHIPPING_VERSION', '2.2.2' );
+		}
+	}
+
+	public function filters() {
+		add_filter( 'edd_purchase_data_before_gateway',    array( $this, 'set_shipping_info' ), 10, 2 );
+		add_filter( 'edd_paypal_redirect_args',            array( $this, 'send_shipping_to_paypal' ), 10, 2 );
+		add_filter( 'edd_sale_notification',               array( $this, 'admin_sales_notice' ), 10, 3 );
+	}
+
+	public function actions() {
+		add_action( 'init',                                  array( $this, 'textdomain' ) );
+		add_action( 'init',                                  array( $this, 'apply_shipping_fees' ) );
+		add_action( 'wp_ajax_edd_get_shipping_rate',         array( $this, 'ajax_shipping_rate' ) );
+		add_action( 'wp_ajax_nopriv_edd_get_shipping_rate',  array( $this, 'ajax_shipping_rate' ) );
+		add_action( 'edd_purchase_form_after_cc_form',       array( $this, 'address_fields' ), 999 );
+		add_action( 'edd_checkout_error_checks',             array( $this, 'error_checks' ), 10, 2 );
+		add_action( 'edd_view_order_details_billing_after',  array( $this, 'show_shipping_details' ), 10 );
+		add_action( 'edd_insert_payment',                    array( $this, 'set_as_not_shipped' ), 10, 2 );
+		add_action( 'edd_edit_payment_bottom',               array( $this, 'edit_payment_option' ) );
+		add_action( 'edd_payments_table_do_bulk_action',     array( $this, 'process_bulk_actions' ), 10, 2 );
+
+	}
 
 	/**
 	 * Run action and filter hooks.
@@ -77,111 +112,23 @@ class EDD_Simple_Shipping {
 	 */
 	protected function init() {
 
-		if( ! class_exists( 'Easy_Digital_Downloads' ) )
-			return; // EDD not present
+		// Include the necessary files.
+		include $this->plugin_path . '/includes/admin/settings.php';
 
-		global $edd_options;
-
-		// Check for dependent plugins
-		$this->plugins_check();
-
-		// internationalization
-		add_action( 'init', array( $this, 'textdomain' ) );
-
-		// register settings section
-		add_filter( 'edd_settings_sections_extensions', array( $this, 'settings_section' ) );
-
-		// register our license key settings
-		add_filter( 'edd_settings_extensions', array( $this, 'settings' ), 1 );
-
-		// Add the meta box fields to Download Configuration
-		add_action( 'edd_meta_box_fields', array( $this, 'metabox' ), 10 );
-
-		// Add our variable pricing shipping header
-		add_action( 'edd_download_price_table_head', array( $this, 'price_header' ), 700 );
-
-		// Add our variable pricing shipping options
-		add_action( 'edd_download_price_table_row', array( $this, 'price_row' ), 700, 3 );
-
-		// Add our meta fields to the EDD save routine
-		add_filter( 'edd_metabox_fields_save', array( $this, 'meta_fields_save' ) );
-
-		// Save shipping details on edit
-		add_action( 'edd_updated_edited_purchase', array( $this, 'save_payment' ) );
-
-		// Check shipping rate when billing/shipping fields are changed
-		add_action( 'wp_ajax_edd_get_shipping_rate', array( $this, 'ajax_shipping_rate' ) );
-		add_action( 'wp_ajax_nopriv_edd_get_shipping_rate', array( $this, 'ajax_shipping_rate' ) );
-
-		// Apply shipping costs to the checkout
-		add_action( 'init', array( $this, 'apply_shipping_fees' ) );
-
-		// Display the shipping address fields
-		add_action( 'edd_purchase_form_after_cc_form', array( $this, 'address_fields' ), 999 );
-
-		// Check for errors on checkout submission
-		add_action( 'edd_checkout_error_checks', array( $this, 'error_checks' ), 10, 2 );
-
-		// Store shipping info
-		add_filter( 'edd_purchase_data_before_gateway', array( $this, 'set_shipping_info' ), 10, 2 );
-
-		// Send shipping info to PayPal
-		add_filter( 'edd_paypal_redirect_args', array( $this, 'send_shipping_to_paypal' ), 10, 2 );
-
-		// Display the user's shipping info in the View Details popup
-		add_action( 'edd_view_order_details_billing_after', array( $this, 'show_shipping_details' ), 10 );
-
-		// Set payment as not shipped
-		add_action( 'edd_insert_payment', array( $this, 'set_as_not_shipped' ), 10, 2 );
-
-		// Add the shipped status column
-		add_filter( 'edd_payments_table_columns', array( $this, 'add_shipped_column' ) );
-
-		// Make our Shipped? column sortable
-		add_filter( 'edd_payments_table_sortable_columns', array( $this, 'add_sortable_column' ) );
-
-		// Sort the payment history by orders that have been shipped or not
-		add_filter( 'edd_get_payments_args', array( $this, 'sort_payments' ) );
-
-		// Display our Shipped? column value
-		add_filter( 'edd_payments_table_column', array( $this, 'display_shipped_column_value' ), 10, 3 );
-
-		// Add our Shipped? checkbox to the edit payment screen
-		add_action( 'edd_edit_payment_bottom', array( $this, 'edit_payment_option' ) );
-
-		// Modify the admin sales notice
-		add_filter( 'edd_sale_notification', array( $this, 'admin_sales_notice' ), 10, 3 );
-
-		// Add a new box to the export screen
-		add_action( 'edd_reports_tab_export_content_bottom', array( $this, 'show_export_options' ) );
-
-		add_action( 'edd_unshipped_orders_export', array( $this, 'do_export' ) );
-
-		add_filter( 'edd_payments_table_bulk_actions', array( $this, 'register_bulk_action' ) );
-		add_action( 'edd_payments_table_do_bulk_action', array( $this, 'process_bulk_actions' ), 10, 2 );
-
-		if( $this->is_fes ) {
-
-			/**
-			 * Frontend Submissions actions
-			 */
-
-			add_action( 'fes-order-table-column-title', array( $this, 'shipped_column_header' ), 10 );
-			add_action( 'fes-order-table-column-value', array( $this, 'shipped_column_value' ), 10 );
-			add_action( 'edd_payment_receipt_after', array( $this, 'payment_receipt_after' ), 10, 2 );
-			add_action( 'edd_toggle_shipped_status', array( $this, 'frontend_toggle_shipped_status' ) );
-
-			if ( version_compare( fes_plugin_version, '2.3', '>=' ) ) {
-				add_action( 'fes_load_fields_require',  array( $this, 'edd_fes_simple_shipping' ) );
-			} else {
-				add_action( 'fes_custom_post_button', array( $this, 'edd_fes_simple_shipping_field_button' ) );
-				add_action( 'fes_admin_field_edd_simple_shipping', array( $this, 'edd_fes_simple_shipping_admin_field' ), 10, 3 );
-				add_filter( 'fes_formbuilder_custom_field', array( $this, 'edd_fes_simple_shipping_formbuilder_is_custom_field' ), 10, 2 );
-				add_action( 'fes_submit_submission_form_bottom', array( $this, 'edd_fes_simple_shipping_save_custom_fields' ) );
-				add_action( 'fes_render_field_edd_simple_shipping', array( $this, 'edd_fes_simple_shipping_field' ), 10, 3 );
-			}
-
+		if ( is_admin() ) {
+			include $this->plugin_path . '/includes/admin/admin.php';
+			include $this->plugin_path . '/includes/admin/metabox.php';
 		}
+
+		// Load all the settings into local variables so we can use them.
+		$this->settings = new EDD_Simple_shipping_Settings();
+		if ( is_admin() ) {
+			$this->admin = new EDD_Simple_Shipping_Admin();
+			$this->metabox = new EDD_Simple_shipping_Metabox();
+		}
+
+		// Check for dependent plugins.
+		$this->plugins_check();
 
 		// auto updater
 		if( is_admin() ) {
@@ -201,10 +148,10 @@ class EDD_Simple_Shipping {
 	 * @access private
 	 * @return void
 	 */
-	public static function textdomain() {
+	public function textdomain() {
 
 		// Set filter for plugin's languages directory
-		$lang_dir = dirname( plugin_basename( __FILE__ ) ) . '/languages/';
+		$lang_dir = $this->plugin_path . '/languages/';
 		$lang_dir = apply_filters( 'edd_simple_shipping_lang_directory', $lang_dir );
 
 		// Load the translations
@@ -224,67 +171,10 @@ class EDD_Simple_Shipping {
 
 		if( class_exists( 'EDD_Front_End_Submissions' ) ) {
 			$this->is_fes = true;
+			require_once $this->plugin_path . '/includes/integrations/edd-fes.php';
 		}
 
 	}
-
-
-	/**
-	 * Render the extra meta box fields
-	 *
-	 * @since 1.0
-	 *
-	 * @access private
-	 * @return void
-	 */
-	public function metabox( $post_id = 0 ) {
-
-		global $edd_options;
-
-		$enabled       = get_post_meta( $post_id, '_edd_enable_shipping', true );
-		$display       = $enabled ? '' : 'style="display:none;"';
-		$domestic      = get_post_meta( $post_id, '_edd_shipping_domestic', true );
-		$international = get_post_meta( $post_id, '_edd_shipping_international', true );
-		?>
-		<div id="edd_simple_shipping">
-			<script type="text/javascript">jQuery(document).ready(function($) {$('#edd_enable_shipping').on('click',function() {$('#edd_simple_shipping_fields,.edd_prices_shipping').toggle();});});</script>
-			<p><strong><?php _e( 'Shipping Options', 'edd-simple-shipping' ); ?></strong></p>
-			<p>
-				<label for="edd_enable_shipping">
-					<input type="checkbox" name="_edd_enable_shipping" id="edd_enable_shipping" value="1"<?php checked( 1, $enabled ); ?>/>
-					<?php printf( __( 'Enable shipping for this %s', 'edd-simple-shipping' ), edd_get_label_singular() ); ?>
-				</label>
-			</p>
-			<div id="edd_simple_shipping_fields" <?php echo $display; ?>>
-				<table>
-					<tr>
-						<td>
-							<label for="edd_shipping_domestic"><?php _e( 'Domestic Rate:', 'edd-simple-shipping' ); ?>&nbsp;</label>
-						</td>
-						<td>
-							<?php if( ! isset( $edd_options['currency_position'] ) || $edd_options['currency_position'] == 'before' ) : ?>
-								<span><?php echo edd_currency_filter( '' ); ?></span><input type="number" min="0" step="0.01" class="small-text" value="<?php esc_attr_e( $domestic ); ?>" id="edd_shipping_domestic" name="_edd_shipping_domestic"/>
-							<?php else : ?>
-								<input type="number" min="0" step="0.01" class="small-text" value="<?php esc_attr_e( $domestic ); ?>" id="edd_shipping_domestic" name="_edd_shipping_domestic"/><?php echo edd_currency_filter( '' ); ?>
-							<?php endif; ?>
-						</td>
-						<td>
-							<label for="edd_shipping_international"><?php _e( 'International Rate:', 'edd-simple-shipping' ); ?>&nbsp;</label>
-						</td>
-						<td>
-							<?php if( ! isset( $edd_options['currency_position'] ) || $edd_options['currency_position'] == 'before' ) : ?>
-								<span><?php echo edd_currency_filter( '' ); ?></span><input type="number" min="0" step="0.01" class="small-text" value="<?php esc_attr_e( $international ); ?>" id="edd_shipping_international" name="_edd_shipping_international"/>
-							<?php else : ?>
-								<input type="number" min="0" step="0.01" class="small-text" value="<?php esc_attr_e( $international ); ?>" id="edd_shipping_international" name="_edd_shipping_international"/><?php echo edd_currency_filter( '' ); ?>
-							<?php endif; ?>
-						</td>
-					</tr>
-				</table>
-			</div>
-		</div>
-	<?php
-	}
-
 
 	/**
 	 *Add the table header cell for price shipping
@@ -300,78 +190,6 @@ class EDD_Simple_Shipping {
 		?>
 		<th class="edd_prices_shipping"<?php echo $display; ?>><?php _e( 'Shipping', 'edd-simple-shipping' ); ?></th>
 	<?php
-	}
-
-
-	/**
-	 *Add the table cell for price shipping
-	 *
-	 * @since 1.0
-	 *
-	 * @access private
-	 * @return void
-	 */
-	function price_row( $post_id = 0, $price_key = 0, $args = array() ) {
-		$enabled       = get_post_meta( $post_id, '_edd_enable_shipping', true );
-		$display       = $enabled ? '' : 'style="display:none;"';
-		$prices        = edd_get_variable_prices( $post_id );
-		$shipping      = isset( $prices[ $price_key ]['shipping'] );
-		?>
-		<td class="edd_prices_shipping"<?php echo $display; ?>>
-			<label for="edd_variable_prices[<?php echo $price_key; ?>][shipping]">
-				<input type="checkbox" value="1"<?php checked( true, $shipping ); ?> id="edd_variable_prices[<?php echo $price_key; ?>][shipping]" name="edd_variable_prices[<?php echo $price_key; ?>][shipping]" style="float:left;width:auto;margin:2px 5px 0 0;"/>
-				<span><?php _e( 'Check to enable shipping costs for this price.', 'edd-simple-shipping' ); ?></span>
-			</label>
-		</td>
-	<?php
-	}
-
-
-	/**
-	 * Save our extra meta box fields
-	 *
-	 * @since 1.0
-	 *
-	 * @access private
-	 * @return array
-	 */
-	public function meta_fields_save( $fields ) {
-
-		// Tell EDD to save our extra meta fields
-		$fields[] = '_edd_enable_shipping';
-		$fields[] = '_edd_shipping_domestic';
-		$fields[] = '_edd_shipping_international';
-		return $fields;
-
-	}
-
-	/**
-	 * Save the shipping details on payment edit
-	 *
-	 * @since 1.5
-	 *
-	 * @access private
-	 * @return void
-	 */
-	public function save_payment( $payment_id = 0 ) {
-
-		$address = isset( $_POST['edd-payment-shipping-address'] ) ? $_POST['edd-payment-shipping-address'] : false;
-		if( ! $address )
-			return;
-
-		$meta      = edd_get_payment_meta( $payment_id );
-		$user_info = maybe_unserialize( $meta['user_info'] );
-
-		$user_info['shipping_info'] = $address[0];
-
-		$meta['user_info'] = $user_info;
-		update_post_meta( $payment_id, '_edd_payment_meta', $meta );
-
-		if( isset( $_POST['edd-payment-shipped'] ) ) {
-			update_post_meta( $payment_id, '_edd_payment_shipping_status', '2' );
-		} elseif( get_post_meta( $payment_id, '_edd_payment_shipping_status', true ) ) {
-			update_post_meta( $payment_id, '_edd_payment_shipping_status', '1' );
-		}
 	}
 
 	/**
@@ -465,7 +283,6 @@ class EDD_Simple_Shipping {
 		return $base_region;
 
 	}
-
 
 	/**
 	 * Update the shipping costs via ajax
@@ -1144,84 +961,6 @@ class EDD_Simple_Shipping {
 	<?php
 	}
 
-
-	/**
-	 * Add a shipped status column to Payment History
-	 *
-	 * @since 1.0
-	 *
-	 * @access public
-	 * @return array
-	 */
-	public function add_shipped_column( $columns ) {
-		// Force the Shipped column to be placed just before Status
-		unset( $columns['status'] );
-		$columns['shipped'] = __( 'Shipped?', 'edd-simple-shipping' );
-		$columns['status']  = __( 'Status', 'edd-simple-shipping' );
-		return $columns;
-	}
-
-
-	/**
-	 * Make the Shipped? column sortable
-	 *
-	 * @since 1.0
-	 *
-	 * @access public
-	 * @return array
-	 */
-	public function add_sortable_column( $columns ) {
-		$columns['shipped'] = array( 'shipped', false );
-		return $columns;
-	}
-
-
-	/**
-	 * Sort payment history by shipped status
-	 *
-	 * @since 1.0
-	 *
-	 * @access public
-	 * @return array
-	 */
-	public function sort_payments( $args ) {
-
-		if( isset( $_GET['orderby'] ) && $_GET['orderby'] == 'shipped' ) {
-
-			$args['orderby'] = 'meta_value';
-			$args['meta_key'] = '_edd_payment_shipping_status';
-
-		}
-
-		return $args;
-
-	}
-
-
-	/**
-	 * Display the shipped status
-	 *
-	 * @since 1.0
-	 *
-	 * @access public
-	 * @return string
-	 */
-	public function display_shipped_column_value( $value = '', $payment_id = 0, $column_name = '' ) {
-
-		if( $column_name == 'shipped' ) {
-			$shipping_status = get_post_meta( $payment_id, '_edd_payment_shipping_status', true );
-			if( $shipping_status == '1' ) {
-				$value = __( 'No', 'edd-simple-shipping' );
-			} elseif( $shipping_status == '2' ) {
-				$value = __( 'Yes', 'edd-simple-shipping' );
-			} else {
-				$value = __( 'N/A', 'edd-simple-shipping' );
-			}
-		}
-		return $value;
-	}
-
-
 	/**
 	 * Add the shipping info to the admin sales notice
 	 *
@@ -1251,168 +990,6 @@ class EDD_Simple_Shipping {
 
 		return $email;
 
-	}
-
-
-	/**
-	 * Add the export unshipped orders box to the export screen
-	 *
-	 * @access      public
-	 * @since       1.2
-	 * @return      void
-	 */
-	public function show_export_options() {
-		?>
-		<div class="postbox">
-			<h3><span><?php _e( 'Export Unshipped Orders to CSV', 'edd-simple-shipping' ); ?></span></h3>
-			<div class="inside">
-				<p><?php _e( 'Download a CSV of all unshipped orders.', 'edd-simple-shipping' ); ?></p>
-				<p><a class="button" href="<?php echo wp_nonce_url( add_query_arg( array( 'edd-action' => 'unshipped_orders_export' ) ), 'edd_export_unshipped_orders' ); ?>"><?php _e( 'Generate CSV', 'edd-simple-shipping' ) ; ?></a></p>
-			</div><!-- .inside -->
-		</div><!-- .postbox -->
-	<?php
-	}
-
-
-	/**
-	 * Trigger the CSV export
-	 *
-	 * @access      public
-	 * @since       1.2
-	 * @return      void
-	 */
-	public function do_export() {
-		require_once dirname( __FILE__ ) . '/class-shipping-export.php';
-
-		$export = new EDD_Simple_Shipping_Export();
-
-		$export->export();
-	}
-
-	/**
-	 * Add Simple Shipping settings section
-	 *
-	 * @since 2.2.2
-	 *
-	 * @access public
-	 * @return array
-	 */
-	public function settings_section( $sections ) {
-		$sections['edd-simple-shipping-settings'] = __( 'Simple Shipping', 'edd-simple-shipping' );
-		return $sections;
-	}
-
-	/**
-	 * Add Simple Shipping settings
-	 *
-	 * @since 1.0
-	 *
-	 * @access public
-	 * @return array
-	 */
-	public function settings( $settings ) {
-		$simple_shipping_settings = array(
-			array(
-				'id' => 'edd_simple_shipping_license_header',
-				'name' => '<strong>' . __( 'Simple Shipping', 'edd-simple-shipping' ) . '</strong>',
-				'desc' => '',
-				'type' => 'header',
-				'size' => 'regular'
-			),
-			array(
-				'id' => 'edd_simple_shipping_base_country',
-				'name' => __( 'Base Region', 'edd-simple-shipping'),
-				'desc' => __( 'Choose the country your store is based in', 'edd-simple-shipping'),
-				'type'  => 'select',
-				'options' => edd_get_country_list()
-			)
-		);
-
-		if ( version_compare( EDD_VERSION, 2.5, '>=' ) ) {
-			$simple_shipping_settings = array( 'edd-simple-shipping-settings' => $simple_shipping_settings );
-		}
-
-		return array_merge( $settings, $simple_shipping_settings );
-	}
-
-	/**
-	 * Register the bulk action for marking payments as Shipped
-	 *
-	 * @since 1.5
-	 *
-	 * @access public
-	 * @return array
-	 */
-	public function register_bulk_action( $actions ) {
-		$actions['set-as-shipped'] = __( 'Set as Shipped', 'edd-simple-shipping' );
-		return $actions;
-	}
-
-	/**
-	 * Mark payments as shipped in bulk
-	 *
-	 * @since 1.5
-	 *
-	 * @access public
-	 * @return array
-	 */
-	public function process_bulk_actions( $id, $action ) {
-		if ( 'set-as-shipped' === $action ) {
-			update_post_meta( $id, '_edd_payment_shipping_status', '2' );
-		}
-	}
-
-	/**
-	 * Add the shipped status column header
-	 *
-	 * @since 2.0
-	 *
-	 * @param object $order
-	 * @return void
-	 */
-	public function shipped_column_header( $order ) {
-		echo '<th>' . __( 'Shipped', 'edd-simple-shipping' ) . '</th>';
-	}
-
-	/**
-	 * Add the shipped status column header
-	 *
-	 * @since 2.0
-	 *
-	 * @param object $order
-	 * @return void
-	 */
-	public function shipped_column_value( $order ) {
-
-		$shipping_status = get_post_meta( $order->ID, '_edd_payment_shipping_status', true );
-		if( $shipping_status == '1' ) {
-			$value = __( 'No', 'edd-simple-shipping' );
-		} elseif( $shipping_status == '2' ) {
-			$value = __( 'Yes', 'edd-simple-shipping' );
-		} else {
-			$value = __( 'N/A', 'edd-simple-shipping' );
-		}
-
-		$shipped = get_post_meta( $order->ID, '_edd_payment_shipping_status', true );
-		if( $shipped == '2' ) {
-			$new_status = '1';
-		} else {
-			$new_status = '2';
-		}
-
-		$toggle_url = esc_url( add_query_arg( array(
-			'edd_action' => 'toggle_shipped_status',
-			'order_id'   => $order->ID,
-			'new_status' => $new_status
-		) ) );
-
-		$toggle_text = $shipped == '2' ? __( 'Mark as not shipped', 'edd-simple-shipping' ) : __( 'Mark as shipped', 'edd-simple-shipping' );
-
-		echo '<td>' . esc_html( $value );
-		if( $shipped ) {
-			echo '<span class="edd-simple-shipping-sep">&nbsp;&ndash;&nbsp;</span><a href="' . $toggle_url . '" class="edd-simple-shipping-toggle-status">' . $toggle_text . '</a>';
-		}
-		echo '</td>';
 	}
 
 	/**
@@ -1524,142 +1101,6 @@ class EDD_Simple_Shipping {
 		exit();
 	}
 
-	function edd_fes_simple_shipping(){
-		if ( version_compare( fes_plugin_version, '2.3', '>=' ) ) {
-			require_once dirname( __FILE__ ) . '/shipping-field.php';
-			add_filter(  'fes_load_fields_array', 'edd_fes_simple_shipping_add_field', 10, 1 );
-			function edd_fes_simple_shipping_add_field( $fields ){
-				$fields['edd_simple_shipping'] = 'FES_Simple_Shipping_Field';
-				return $fields;
-			}
-		}
-	}
-
-
-	/**
-	 * Register a custom FES submission form button
-	 *
-	 * @since 2.0
-	 *
-	 * @return void
-	 */
-	function edd_fes_simple_shipping_field_button( $title ) {
-		if ( version_compare( fes_plugin_version, '2.2', '>=' ) ) {
-			echo  '<button class="fes-button button" data-name="edd_simple_shipping" data-type="action" title="' . esc_attr( $title ) . '">'. __( 'Shipping', 'edd-simple-shipping' ) . '</button>';
-		}
-	}
-
-	/**
-	 * Setup the custom FES form field
-	 *
-	 * @since 2.0
-	 *
-	 * @return void
-	 */
-	function edd_fes_simple_shipping_admin_field( $field_id, $label = "", $values = array() ) {
-		if( ! isset( $values['label'] ) ) {
-			$values['label'] = __( 'Shipping', 'edd-simple-shipping' );
-		}
-
-		$values['no_css']  = true;
-		$values['is_meta'] = true;
-		$values['name']    = 'edd_simple_shipping';
-		?>
-		<li class="edd_simple_shipping">
-			<?php FES_Formbuilder_Templates::legend( $values['label'] ); ?>
-			<?php FES_Formbuilder_Templates::hidden_field( "[$field_id][input_type]", 'edd_simple_shipping' ); ?>
-			<?php FES_Formbuilder_Templates::hidden_field( "[$field_id][template]", 'edd_simple_shipping' ); ?>
-			<div class="fes-form-holder">
-				<?php FES_Formbuilder_Templates::common( $field_id, 'edd_simple_shipping', false, $values, false, '' ); ?>
-			</div> <!-- .fes-form-holder -->
-		</li>
-	<?php
-	}
-
-	/**
-	 * Indicate that this is a custom field
-	 *
-	 * @since 2.0
-	 *
-	 * @return bool
-	 */
-	function edd_fes_simple_shipping_formbuilder_is_custom_field( $bool, $template_field ) {
-		if ( $bool ) {
-			return $bool;
-		} else if ( isset( $template_field['template'] ) && $template_field['template'] == 'edd_simple_shipping' ) {
-			return true;
-		} else {
-			return $bool;
-		}
-	}
-
-	/**
-	 * save the input values when the submission form is submitted
-	 *
-	 * @since 2.0
-	 *
-	 * @return void
-	 */
-	function edd_fes_simple_shipping_save_custom_fields( $post_id ) {
-		if ( isset( $_POST ['edd_simple_shipping'] ) && isset( $_POST ['edd_simple_shipping']['enabled'] ) ) {
-			$domestic      = ! empty( $_POST ['edd_simple_shipping']['domestic'] ) ? edd_sanitize_amount( $_POST ['edd_simple_shipping']['domestic'] ) : 0;
-			$international = ! empty( $_POST ['edd_simple_shipping']['international'] ) ? edd_sanitize_amount( $_POST ['edd_simple_shipping']['international'] ) : 0;
-			update_post_meta( $post_id, '_edd_enable_shipping', '1' );
-			update_post_meta( $post_id, '_edd_shipping_domestic', $domestic );
-			update_post_meta( $post_id, '_edd_shipping_international', $international );
-
-			$prices = edd_get_variable_prices( $post_id );
-			if( ! empty( $prices ) ) {
-				foreach( $prices as $price_id => $price ) {
-					$prices[ $price_id ]['shipping'] = '1';
-				}
-				update_post_meta( $post_id, 'edd_variable_prices', $prices );
-			}
-		} else {
-			delete_post_meta( $post_id, '_edd_enable_shipping' );
-		}
-	}
-
-	/**
-	 * Render our shipping fields in the submission form
-	 *
-	 * @since 2.0
-	 *
-	 * @return void
-	 */
-	function edd_fes_simple_shipping_field( $attr, $post_id, $type ) {
-
-		$required = '';
-		if ( isset( $attr['required'] ) && $attr['required'] == 'yes' ) {
-			$required = apply_filters( 'fes_required_class', ' edd-required-indicator', $attr );
-		}
-
-		$enabled       = get_post_meta( $post_id, '_edd_enable_shipping', true );
-		$domestic      = get_post_meta( $post_id, '_edd_shipping_domestic', true );
-		$international = get_post_meta( $post_id, '_edd_shipping_international', true );
-
-		?>
-		<style>
-			div.fes-form fieldset .fes-fields.edd_simple_shipping label { width: 100%; display:block; }
-			div.fes-form fieldset .fes-fields.edd_simple_shipping .edd-fes-shipping-fields label { width: 45%; display:inline-block; }
-			div.fes-form fieldset .fes-fields .edd-shipping-field { width: 45%; display:inline-block; }
-		</style>
-		<div class="fes-fields <?php echo sanitize_key( $attr['name']); ?>">
-			<label for="edd_simple_shipping[enabled]">
-				<input type="checkbox" name="edd_simple_shipping[enabled]" id="edd_simple_shipping[enabled]" value="1"<?php checked( '1', $enabled ); ?>/>
-				<?php _e( 'Enable Shipping', 'edd-simple-shipping' ); ?>
-			</label>
-			<div class="edd-fes-shipping-fields">
-				<label for="edd_simple_shipping[domestic]"><?php _e( 'Domestic', 'edd-simple-shipping' ); ?></label>
-				<label for="edd_simple_shipping[international]"><?php _e( 'International', 'edd-simple-shipping' ); ?></label>
-				<input class="edd-shipping-field textfield<?php echo esc_attr( $required ); ?>" id="edd_simple_shipping[domestic]" type="text" data-required="<?php echo $attr['required'] ?>" data-type="text" name="<?php echo esc_attr( $attr['name'] ); ?>[domestic]" placeholder="<?php echo __( 'Enter the domestic shipping charge amount', 'edd-simple-shipping' ); ?>" value="<?php echo esc_attr( $domestic ) ?>" size="10" />
-				<input class="edd-shipping-field textfield<?php echo esc_attr( $required ); ?>" id="edd_simple_shipping[international]" type="text" data-required="<?php echo $attr['required'] ?>" data-type="text" name="<?php echo esc_attr( $attr['name'] ); ?>[international]" placeholder="<?php echo __( 'Enter the international shipping charge amount', 'edd-simple-shipping' ); ?>" value="<?php echo esc_attr( $international ) ?>" size="10" />
-			</div>
-		</div> <!-- .fes-fields -->
-	<?php
-	}
-
-
 }
 
 
@@ -1669,10 +1110,19 @@ class EDD_Simple_Shipping {
  * @since 1.0
  *
  * @access private
- * @return void
+ * @return object EDD_Simple_Shipping
  */
-
 function edd_simple_shipping_load() {
-	$edd_simple_shipping = new EDD_Simple_Shipping();
+	return EDD_Simple_Shipping::get_instance();
 }
 add_action( 'plugins_loaded', 'edd_simple_shipping_load', 0 );
+
+/**
+ * A nice function name to retrieve the instance that's created on plugins loaded
+ *
+ * @since 2.2.3
+ * @return object EDD_Simple_Shipping
+ */
+function edd_simple_shipping() {
+	return edd_simple_shipping_load();
+}
