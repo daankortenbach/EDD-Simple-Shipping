@@ -4,6 +4,10 @@ if ( ! defined( 'ABSPATH' ) ) { exit; }
 class EDD_Simple_Shipping_FES {
 
 	public function __construct() {
+		add_action( 'plugins_loaded', array( $this, 'init' ), 99 );
+	}
+
+	public function init() {
 		$simple_shipping = edd_simple_shipping();
 		add_action( 'fes-order-table-column-title', array( $simple_shipping->admin, 'shipped_column_header' ), 10 );
 		add_action( 'fes-order-table-column-value', array( $simple_shipping->admin, 'shipped_column_value' ), 10 );

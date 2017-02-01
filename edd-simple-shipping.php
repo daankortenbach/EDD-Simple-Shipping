@@ -37,9 +37,9 @@ class EDD_Simple_Shipping {
 	protected $plugin_path = null;
 	protected $plugin_url  = null;
 
-	protected $settings;
-	protected $metabox;
-	protected $admin;
+	public $settings;
+	public $metabox;
+	public $admin;
 
 	/**
 	 * Get active object instance
@@ -52,8 +52,9 @@ class EDD_Simple_Shipping {
 	 */
 	public static function get_instance() {
 
-		if ( ! self::$instance )
+		if ( ! self::$instance ) {
 			self::$instance = new EDD_Simple_Shipping();
+		}
 
 		return self::$instance;
 	}
@@ -172,6 +173,7 @@ class EDD_Simple_Shipping {
 		if( class_exists( 'EDD_Front_End_Submissions' ) ) {
 			$this->is_fes = true;
 			require_once $this->plugin_path . '/includes/integrations/edd-fes.php';
+			$this->fes = new EDD_Simple_Shipping_FES();
 		}
 
 	}
@@ -1115,7 +1117,7 @@ class EDD_Simple_Shipping {
 function edd_simple_shipping_load() {
 	return EDD_Simple_Shipping::get_instance();
 }
-add_action( 'plugins_loaded', 'edd_simple_shipping_load', 0 );
+add_action( 'plugins_loaded', 'edd_simple_shipping_load' );
 
 /**
  * A nice function name to retrieve the instance that's created on plugins loaded
