@@ -96,6 +96,22 @@ class EDD_Simple_Shipping_Metabox {
 	}
 
 	/**
+	 *Add the table header cell for price shipping
+	 *
+	 * @since 1.0
+	 *
+	 * @access private
+	 * @return void
+	 */
+	function price_header( $post_id = 0 ) {
+		$enabled       = get_post_meta( $post_id, '_edd_enable_shipping', true );
+		$display       = $enabled ? '' : 'style="display:none;"';
+		?>
+		<th class="edd_prices_shipping"<?php echo $display; ?>><?php _e( 'Shipping', 'edd-simple-shipping' ); ?></th>
+	<?php
+	}
+
+	/**
 	 *Add the table cell for price shipping
 	 *
 	 * @since 1.0

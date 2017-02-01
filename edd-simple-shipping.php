@@ -34,12 +34,13 @@ class EDD_Simple_Shipping {
 	 */
 	protected $is_fes = false;
 
-	protected $plugin_path = null;
-	protected $plugin_url  = null;
+	public $plugin_path = null;
+	public $plugin_url  = null;
 
 	public $settings;
 	public $metabox;
 	public $admin;
+	public $fes;
 
 	/**
 	 * Get active object instance
@@ -100,7 +101,6 @@ class EDD_Simple_Shipping {
 		add_action( 'edd_insert_payment',                    array( $this, 'set_as_not_shipped' ), 10, 2 );
 		add_action( 'edd_edit_payment_bottom',               array( $this, 'edit_payment_option' ) );
 		add_action( 'edd_payments_table_do_bulk_action',     array( $this, 'process_bulk_actions' ), 10, 2 );
-
 	}
 
 	/**
@@ -114,11 +114,11 @@ class EDD_Simple_Shipping {
 	protected function init() {
 
 		// Include the necessary files.
-		include $this->plugin_path . '/includes/admin/settings.php';
+		require_once $this->plugin_path . '/includes/admin/settings.php';
 
 		if ( is_admin() ) {
-			include $this->plugin_path . '/includes/admin/admin.php';
-			include $this->plugin_path . '/includes/admin/metabox.php';
+			require_once $this->plugin_path . '/includes/admin/admin.php';
+			require_once $this->plugin_path . '/includes/admin/metabox.php';
 		}
 
 		// Load all the settings into local variables so we can use them.
@@ -128,7 +128,6 @@ class EDD_Simple_Shipping {
 			$this->metabox = new EDD_Simple_shipping_Metabox();
 		}
 
-		// Check for dependent plugins.
 		$this->plugins_check();
 
 		// auto updater
@@ -174,24 +173,24 @@ class EDD_Simple_Shipping {
 			$this->is_fes = true;
 			require_once $this->plugin_path . '/includes/integrations/edd-fes.php';
 			$this->fes = new EDD_Simple_Shipping_FES();
+
+			add_action( 'fes-order-table-column-title', array( $this->admin, 'shipped_column_header' ), 10 );
+			add_action( 'fes-order-table-column-value', array( $this->admin, 'shipped_column_value' ), 10 );
+
+			add_action( 'edd_payment_receipt_after',    array( $this, 'payment_receipt_after' ), 10, 2 );
+			add_action( 'edd_toggle_shipped_status',    array( $this, 'frontend_toggle_shipped_status' ) );
+
+			if ( version_compare( fes_plugin_version, '2.3', '>=' ) ) {
+				add_action( 'fes_load_fields_require',  array( $this->fes, 'edd_fes_simple_shipping' ) );
+			} else {
+				add_action( 'fes_custom_post_button',               array( $this->fes, 'edd_fes_simple_shipping_field_button' ) );
+				add_action( 'fes_admin_field_edd_simple_shipping',  array( $this->fes, 'edd_fes_simple_shipping_admin_field' ), 10, 3 );
+				add_filter( 'fes_formbuilder_custom_field',         array( $this->fes, 'edd_fes_simple_shipping_formbuilder_is_custom_field' ), 10, 2 );
+				add_action( 'fes_submit_submission_form_bottom',    array( $this->fes, 'edd_fes_simple_shipping_save_custom_fields' ) );
+				add_action( 'fes_render_field_edd_simple_shipping', array( $this->fes, 'edd_fes_simple_shipping_field' ), 10, 3 );
+			}
 		}
 
-	}
-
-	/**
-	 *Add the table header cell for price shipping
-	 *
-	 * @since 1.0
-	 *
-	 * @access private
-	 * @return void
-	 */
-	function price_header( $post_id = 0 ) {
-		$enabled       = get_post_meta( $post_id, '_edd_enable_shipping', true );
-		$display       = $enabled ? '' : 'style="display:none;"';
-		?>
-		<th class="edd_prices_shipping"<?php echo $display; ?>><?php _e( 'Shipping', 'edd-simple-shipping' ); ?></th>
-	<?php
 	}
 
 	/**

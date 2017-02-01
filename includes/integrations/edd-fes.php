@@ -3,34 +3,11 @@ if ( ! defined( 'ABSPATH' ) ) { exit; }
 
 class EDD_Simple_Shipping_FES {
 
-	public function __construct() {
-		add_action( 'plugins_loaded', array( $this, 'init' ), 99 );
-	}
-
-	public function init() {
-		$simple_shipping = edd_simple_shipping();
-		add_action( 'fes-order-table-column-title', array( $simple_shipping->admin, 'shipped_column_header' ), 10 );
-		add_action( 'fes-order-table-column-value', array( $simple_shipping->admin, 'shipped_column_value' ), 10 );
-
-		add_action( 'edd_payment_receipt_after',    array( $simple_shipping, 'payment_receipt_after' ), 10, 2 );
-		add_action( 'edd_toggle_shipped_status',    array( $simple_shipping, 'frontend_toggle_shipped_status' ) );
-
-		if ( version_compare( fes_plugin_version, '2.3', '>=' ) ) {
-			add_action( 'fes_load_fields_require',  array( $this, 'edd_fes_simple_shipping' ) );
-		} else {
-			add_action( 'fes_custom_post_button',               array( $this, 'edd_fes_simple_shipping_field_button' ) );
-			add_action( 'fes_admin_field_edd_simple_shipping',  array( $this, 'edd_fes_simple_shipping_admin_field' ), 10, 3 );
-			add_filter( 'fes_formbuilder_custom_field',         array( $this, 'edd_fes_simple_shipping_formbuilder_is_custom_field' ), 10, 2 );
-			add_action( 'fes_submit_submission_form_bottom',    array( $this, 'edd_fes_simple_shipping_save_custom_fields' ) );
-			add_action( 'fes_render_field_edd_simple_shipping', array( $this, 'edd_fes_simple_shipping_field' ), 10, 3 );
-		}
-	}
-
-	function edd_fes_simple_shipping(){
+	public function edd_fes_simple_shipping() {
 		if ( version_compare( fes_plugin_version, '2.3', '>=' ) ) {
 			require_once edd_simple_shipping()->plugin_path . '/includes/integrations/edd-fes-shipping-field.php';
 			add_filter(  'fes_load_fields_array', 'edd_fes_simple_shipping_add_field', 10, 1 );
-			function edd_fes_simple_shipping_add_field( $fields ){
+			function edd_fes_simple_shipping_add_field( $fields ) {
 				$fields['edd_simple_shipping'] = 'FES_Simple_Shipping_Field';
 				return $fields;
 			}
@@ -45,7 +22,7 @@ class EDD_Simple_Shipping_FES {
 	 *
 	 * @return void
 	 */
-	function edd_fes_simple_shipping_field_button( $title ) {
+	public function edd_fes_simple_shipping_field_button( $title ) {
 		if ( version_compare( fes_plugin_version, '2.2', '>=' ) ) {
 			echo  '<button class="fes-button button" data-name="edd_simple_shipping" data-type="action" title="' . esc_attr( $title ) . '">'. __( 'Shipping', 'edd-simple-shipping' ) . '</button>';
 		}
@@ -58,7 +35,7 @@ class EDD_Simple_Shipping_FES {
 	 *
 	 * @return void
 	 */
-	function edd_fes_simple_shipping_admin_field( $field_id, $label = "", $values = array() ) {
+	public function edd_fes_simple_shipping_admin_field( $field_id, $label = "", $values = array() ) {
 		if( ! isset( $values['label'] ) ) {
 			$values['label'] = __( 'Shipping', 'edd-simple-shipping' );
 		}
@@ -85,7 +62,7 @@ class EDD_Simple_Shipping_FES {
 	 *
 	 * @return bool
 	 */
-	function edd_fes_simple_shipping_formbuilder_is_custom_field( $bool, $template_field ) {
+	public function edd_fes_simple_shipping_formbuilder_is_custom_field( $bool, $template_field ) {
 		if ( $bool ) {
 			return $bool;
 		} else if ( isset( $template_field['template'] ) && $template_field['template'] == 'edd_simple_shipping' ) {
@@ -102,7 +79,7 @@ class EDD_Simple_Shipping_FES {
 	 *
 	 * @return void
 	 */
-	function edd_fes_simple_shipping_save_custom_fields( $post_id ) {
+	public function edd_fes_simple_shipping_save_custom_fields( $post_id ) {
 		if ( isset( $_POST ['edd_simple_shipping'] ) && isset( $_POST ['edd_simple_shipping']['enabled'] ) ) {
 			$domestic      = ! empty( $_POST ['edd_simple_shipping']['domestic'] ) ? edd_sanitize_amount( $_POST ['edd_simple_shipping']['domestic'] ) : 0;
 			$international = ! empty( $_POST ['edd_simple_shipping']['international'] ) ? edd_sanitize_amount( $_POST ['edd_simple_shipping']['international'] ) : 0;
@@ -129,7 +106,7 @@ class EDD_Simple_Shipping_FES {
 	 *
 	 * @return void
 	 */
-	function edd_fes_simple_shipping_field( $attr, $post_id, $type ) {
+	public function edd_fes_simple_shipping_field( $attr, $post_id, $type ) {
 
 		$required = '';
 		if ( isset( $attr['required'] ) && $attr['required'] == 'yes' ) {
@@ -160,5 +137,4 @@ class EDD_Simple_Shipping_FES {
 		</div> <!-- .fes-fields -->
 	<?php
 	}
-
 }
