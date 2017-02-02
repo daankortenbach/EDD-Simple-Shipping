@@ -92,7 +92,7 @@ class EDD_Simple_shipping_Settings {
 				'desc'        => __( 'Enter the text that is used when sending shipment tracking information to customers. HTML is accepted. Available template tags:','edd-simple-shipping' ) . '<br/>' . edd_get_emails_tags_list(),
 				'type'        => 'rich_editor',
 				'allow_blank' => false,
-				'std'         => __( "Dear", "edd-simple-shipping" ) . " {name},\n\n" . sprintf( __( "Your recent order %s has been shipped. Your tracking information is below.", "edd-simple-shipping" ), '{payment_id}' ) . "\n\n{tracking_ids}\n\n{sitename}",
+				'std'         => edd_simple_shipping()->tracking->get_default_tracking_email_message(),
 			),
 		);
 
