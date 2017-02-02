@@ -1,4 +1,6 @@
 <?php
+if ( ! defined( 'ABSPATH' ) ) exit;
+
 class FES_Simple_Shipping_Field extends FES_Field {
 
 	/** @var bool For 3rd parameter of get_post/user_meta */
