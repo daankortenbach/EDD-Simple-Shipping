@@ -171,8 +171,9 @@ class EDD_Simple_Shipping_Tracking {
 		$subject      = edd_get_option( 'tracking_ids_subject', __( 'Your order has shipped!', 'edd-simple-shipping' ) );
 		$heading      = edd_get_option( 'tracking_ids_heading', __( 'Your order has shipped!', 'edd-simple-shipping' ) );
 		$message      = edd_get_option( 'tracking_ids_email', '' );
+
 		if ( empty( $message ) ) {
-			$this->get_default_tracking_email_message();
+			$message = $this->get_default_tracking_email_message();
 		}
 
 		$message = EDD()->email_tags->do_tags( $message, $post['payment_id'] );
