@@ -229,13 +229,47 @@ class EDD_Simple_Shipping {
 		if ( false !== $has_shipping && ! is_array( $has_shipping ) ) {
 			$ret = true;
 		} elseif ( is_array( $has_shipping ) ) {
+			$domestic = $has_shipping['domestic'];
+			$international = $has_shipping['international'];
 
+			// If the price has either domestic or international prices, we have shipping.
+			$ret = ( ! empty( $domestic ) || ! empty( $international ) ) ? true : false;
 		}
 
-		// Keep this old filter
+		// Keep this old filter for backwards compatibility.
 		$ret = apply_filters( 'edd_simple_shipping_price_hasa_shipping', $ret, $item_id, $price_id );
 
 		return (bool) apply_filters( 'edd_simple_shipping_price_has_shipping', $ret, $item_id, $price_id );
+	}
+
+	/**
+	 * Get the shipping price for a specific price ID
+	 *
+	 * @since 2.2.3
+	 * @param int    $download_id The Download ID to look up.
+	 * @param null   $price_id    The Price ID to look up.
+	 * @param string $region      The region to pull for (domestic or international).
+	 *
+	 * @return float
+	 */
+	public function get_price_shipping_cost( $download_id = 0, $price_id = null, $region = 'domestic' ) {
+		$download = new EDD_Download( $download_id );
+		$amount   = 0;
+		if ( $download->has_variable_prices() ) {
+			$prices = $download->get_prices();
+			foreach ( $prices as $key => $price ) {
+
+				// If it's not the right price ID, move along.
+				if ( (int) $key !== (int) $price_id ) { continue; }
+
+				// If the region requested isn't set, continue;
+				if ( ! isset( $price['shipping'][ $region ] ) ) { continue; }
+
+				$amount = $price['shipping'][ $region ];
+			}
+		}
+
+		return apply_filters( 'edd_shipping_variable_price_cost', (float) $amount, $download_id, $price_id, $region );
 	}
 
 
@@ -356,9 +390,7 @@ class EDD_Simple_Shipping {
 			$price_id = isset( $item['options']['price_id'] ) ? (int) $item['options']['price_id'] : null;
 
 			if( ! $this->item_has_shipping( $item['id'], $price_id ) ) {
-
 				continue;
-
 			}
 
 			if( is_user_logged_in() && empty( $_POST['country'] ) ) {
@@ -382,13 +414,17 @@ class EDD_Simple_Shipping {
 			}
 
 			if( $this->is_domestic ) {
-
-				$amount = (float) get_post_meta( $item['id'], '_edd_shipping_domestic', true );
-
+				if ( null !== $price_id ) {
+					$amount = $this->get_price_shipping_cost( $item['id'], $price_id, 'domestic' );
+				} else {
+					$amount = (float) get_post_meta( $item['id'], '_edd_shipping_domestic', true );
+				}
 			} else {
-
-				$amount = (float) get_post_meta( $item['id'], '_edd_shipping_international', true );
-
+				if ( null !== $price_id ) {
+					$amount = $this->get_price_shipping_cost( $item['id'], $price_id, 'international' );
+				} else {
+					$amount = (float) get_post_meta( $item['id'], '_edd_shipping_international', true );
+				}
 			}
 
 			if( $amount > 0 ) {
