@@ -876,6 +876,27 @@ class EDD_Simple_Shipping {
 	}
 
 	/**
+	 * Determins if a payment needs shipping.
+	 * @param int $payment_id
+	 *
+	 * @since 2.2.3
+	 * @return bool
+	 */
+	public function payment_needs_shipping( $payment_id = 0 ) {
+		$payment = new EDD_Payment( $payment_id );
+
+		if ( empty( $payment->ID ) ) {
+			return false;
+		}
+
+		$user_info     = edd_get_payment_meta_user_info( $payment->ID );
+
+		$needs_shipping = ! empty( $user_info['shipping_info'] ) ? true : false;
+
+		return apply_filters( 'edd_payment_needs_shipping', $needs_shipping, $payment_id );
+	}
+
+	/**
 	 * Display shipping details in the View Details popup
 	 *
 	 * @since 1.0
@@ -889,12 +910,14 @@ class EDD_Simple_Shipping {
 			$payment_id = isset( $_GET['id'] ) ? absint( $_GET['id'] ) : 0;
 		}
 
-		$user_info     = edd_get_payment_meta_user_info( $payment_id );
+		$needs_shipping = $this->payment_needs_shipping( $payment_id );
 
-		$address = ! empty( $user_info['shipping_info'] ) ? $user_info['shipping_info'] : false;
-
-		if( ! $address )
+		if( ! $needs_shipping ) {
 			return;
+		}
+
+		$user_info = edd_get_payment_meta_user_info( $payment_id );
+		$address   = ! empty( $user_info['shipping_info'] ) ? $user_info['shipping_info'] : array();
 
 		$status  = get_post_meta( $payment_id, '_edd_payment_shipping_status', true );
 

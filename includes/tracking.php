@@ -12,6 +12,12 @@ class EDD_Simple_Shipping_Tracking {
 	}
 
 	public function payment_tracking( $payment_id ) {
+		$needs_shipping = edd_simple_shipping()->payment_needs_shipping( $payment_id );
+
+		if( ! $needs_shipping ) {
+			return;
+		}
+
 		$tracking_ids = $this->get_payment_tracking( $payment_id );
 		$was_sent     = $this->payment_tracking_last_sent( $payment_id );
 		?>
