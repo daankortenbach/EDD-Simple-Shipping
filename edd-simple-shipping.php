@@ -223,6 +223,7 @@ class EDD_Simple_Shipping {
 	 */
 	protected function price_has_shipping( $item_id = 0, $price_id = 0 ) {
 		$prices = edd_get_variable_prices( $item_id );
+		$ret    = false;
 
 		// Backwards compatibility checks
 		$has_shipping = isset( $prices[ $price_id ]['shipping'] ) ? $prices[ $price_id ]['shipping'] : false;
