@@ -5,7 +5,10 @@ class EDD_Simple_Shipping_Tracking {
 	public function __construct() {
 		add_action( 'edd_view_order_details_billing_after', array( $this, 'payment_tracking' ) );
 		add_action( 'edd_updated_edited_purchase',          array( $this, 'save_edited_payment' ), 10, 1 );
+		add_action( 'edd_add_email_tags',                   array( $this, 'add_email_tag' ), 100 );
 		add_action( 'edd_send-tracking',                    array( $this, 'send_tracking' ), 10, 1 );
+		add_action( 'edd_purchase_history_header_after',    array( $this, 'order_details_header' ), 10, 1 );
+		add_action( 'edd_purchase_history_row_end',         array( $this, 'order_details_row' ), 10, 2 );
 	}
 
 	public function payment_tracking( $payment_id ) {
@@ -116,12 +119,42 @@ class EDD_Simple_Shipping_Tracking {
 		}
 	}
 
+	public function add_email_tag() {
+		edd_add_email_tag( 'tracking_ids', __( 'Show saved tracking ids for payment.', 'edd-simple-shipping' ), array( $this, 'output_tracking_ids_tag' ) );
+	}
+
+	public function output_tracking_ids_tag( $payment_id = 0 ) {
+
+		// Start a buffer so we don't output any errors into the email.
+		ob_start();
+		$output = '';
+		$tracking_ids = $this->get_payment_tracking( $payment_id );
+
+		if ( $tracking_ids ) {
+			$output = '<ul>';
+			foreach ( $tracking_ids as $key => $tracking_info ) {
+				$output .= '<li>' . $tracking_info['name'] . '&mdash;<a href="' . $this->get_tracking_link( $tracking_info['tracking_id'] ) . '">' . $tracking_info['tracking_id'] . '</a></li>';
+			}
+			$output .= '</ul>';
+		}
+		ob_end_clean();
+		return $output;
+
+	}
+
+	public function filter_template_tags( $message, $payment_id ) {
+		$tracking_ids = $this->output_tracking_ids_tag( $payment_id );
+		$message      = str_replace( '{tracking_ids}', $tracking_ids, $message );
+
+		return $message;
+	}
+
 	public function send_tracking( $post ) {
 		$nonce = ! empty( $post['nonce'] ) ? $post['nonce'] : false;
 		if ( ! wp_verify_nonce( $nonce, 'edd-ti-send-tracking' ) ) { wp_die(); }
 
-		$tracking_id = edd_ti_get_payment_tracking_id( $post['payment_id'] );
-		if ( empty( $tracking_id ) ) {
+		$has_tracking = $this->payment_has_tracking( $post['payment_id'] );
+		if ( false === $has_tracking ) {
 			return;
 		}
 
@@ -129,14 +162,13 @@ class EDD_Simple_Shipping_Tracking {
 		$from_email   = edd_get_option( 'from_email', get_bloginfo( 'admin_email' ) );
 		$to_email     = edd_get_payment_user_email( $post['payment_id'] );
 
-		$subject      = 'Your order has shipped';
-		$heading      = 'Your order has shipped!';
+		$subject      = edd_get_option( 'tracking_ids_subject', __( 'Your order has shipped!', 'edd-simple-shipping' ) );
+		$heading      = edd_get_option( 'tracking_ids_heading', __( 'Your order has shipped!', 'edd-simple-shipping' ) );
 
-		$message  = '<p>Your recent order ' . $post['payment_id']. ' has been shipped.</p>';
-		$message .= '<p>Tracking ID: <a href="' . edd_ti_get_payment_tracking_link( $post['payment_id'] ) . '">' . $tracking_id . '</a></p>';
+		$message      = edd_get_option( 'tracking_ids_email', '' );
+		if ( empty( $message ) ) { return; }
 
-		$message .= '<p>Thank you!</p>';
-		$message .= '<p>The ' . $from_name . ' team</p>';
+		$message = EDD()->email_tags->do_tags( $message, $post['payment_id'] );
 
 		$headers  = "From: " . stripslashes_deep( html_entity_decode( $from_name, ENT_COMPAT, 'UTF-8' ) ) . " <$from_email>\r\n";
 		$headers .= "Reply-To: ". $from_email . "\r\n";
@@ -226,6 +258,29 @@ class EDD_Simple_Shipping_Tracking {
 
 	public function get_tracking_link( $tracking_id ) {
 		return apply_filters( 'edd_simple_shipping_tracking_link', 'https://track.aftership.com/' . $tracking_id, $tracking_id);
+	}
+
+	public function order_details_header() {
+		?>
+		<th class="edd_purchase_tracking"><?php _e( 'Tracking', 'edd-tracking-info' ); ?></th>
+		<?
+	}
+
+	public function order_details_row( $payment_id, $purchase_data ) {
+		$tracking_ids = $this->get_payment_tracking( $payment_id );
+		?>
+		<td class="edd-order-details-tracking-ids">
+			<?php if ( $tracking_ids ) : ?>
+				<ul>
+				<?php foreach ( $tracking_ids as $tracking_id ) : ?>
+					<li><a href="<?php echo $this->get_tracking_link( $tracking_id['tracking_id'] ); ?>" target="_blank"><?php echo $tracking_id['tracking_id']; ?></a></li>
+				<?php endforeach; ?>
+				</ul>
+			<?php else : ?>
+				&mdash;
+			<?php endif; ?>
+		</td>
+		<?php
 	}
 
 }
