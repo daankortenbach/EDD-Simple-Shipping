@@ -262,10 +262,21 @@ class EDD_Simple_Shipping {
 				// If it's not the right price ID, move along.
 				if ( (int) $key !== (int) $price_id ) { continue; }
 
-				// If the region requested isn't set, continue;
-				if ( ! isset( $price['shipping'][ $region ] ) ) { continue; }
+				if ( isset( $price['shipping'] ) && is_array( $price['shipping'] ) ) {
+					// If the region requested isn't set, continue;
+					if ( ! isset( $price['shipping'][ $region ] ) ) { continue; }
 
-				$amount = $price['shipping'][ $region ];
+					$amount = $price['shipping'][ $region ];
+				} elseif ( isset( $price['shipping'] ) ) {
+					switch( $region ) {
+						case 'domestic':
+							$amount = get_post_meta( $download_id, '_edd_shipping_domestic', true );
+							break;
+						case 'international':
+							$amount = get_post_meta( $download_id, '_edd_shipping_international', true );
+							break;
+					}
+				}
 			}
 		}
 
