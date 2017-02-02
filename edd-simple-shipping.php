@@ -205,8 +205,9 @@ class EDD_Simple_Shipping {
 		$enabled          = get_post_meta( $item_id, '_edd_enable_shipping', true );
 		$variable_pricing = edd_has_variable_prices( $item_id );
 
-		if( $variable_pricing && ! $this->price_has_shipping( $item_id, $price_id ) )
+		if( $variable_pricing && ! $this->price_has_shipping( $item_id, $price_id ) ) {
 			$enabled = false;
+		}
 
 		return (bool) apply_filters( 'edd_simple_shipping_item_has_shipping', $enabled, $item_id );
 	}
@@ -222,8 +223,19 @@ class EDD_Simple_Shipping {
 	 */
 	protected function price_has_shipping( $item_id = 0, $price_id = 0 ) {
 		$prices = edd_get_variable_prices( $item_id );
-		$ret    = isset( $prices[ $price_id ]['shipping'] );
-		return (bool) apply_filters( 'edd_simple_shipping_price_hasa_shipping', $ret, $item_id, $price_id );
+
+		// Backwards compatibility checks
+		$has_shipping = isset( $prices[ $price_id ]['shipping'] ) ? $prices[ $price_id ]['shipping'] : false;
+		if ( false !== $has_shipping && ! is_array( $has_shipping ) ) {
+			$ret = true;
+		} elseif ( is_array( $has_shipping ) ) {
+
+		}
+
+		// Keep this old filter
+		$ret = apply_filters( 'edd_simple_shipping_price_hasa_shipping', $ret, $item_id, $price_id );
+
+		return (bool) apply_filters( 'edd_simple_shipping_price_has_shipping', $ret, $item_id, $price_id );
 	}
 
 
