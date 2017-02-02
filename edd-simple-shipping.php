@@ -40,6 +40,7 @@ class EDD_Simple_Shipping {
 	public $settings;
 	public $metabox;
 	public $admin;
+	public $tracking;
 	public $fes;
 
 	/**
@@ -115,6 +116,7 @@ class EDD_Simple_Shipping {
 
 		// Include the necessary files.
 		require_once $this->plugin_path . '/includes/admin/settings.php';
+		require_once $this->plugin_path . '/includes/tracking.php';
 
 		if ( is_admin() ) {
 			require_once $this->plugin_path . '/includes/admin/admin.php';
@@ -123,6 +125,7 @@ class EDD_Simple_Shipping {
 
 		// Load all the settings into local variables so we can use them.
 		$this->settings = new EDD_Simple_shipping_Settings();
+		$this->tracking = new EDD_Simple_Shipping_Tracking();
 		if ( is_admin() ) {
 			$this->admin = new EDD_Simple_Shipping_Admin();
 			$this->metabox = new EDD_Simple_shipping_Metabox();
@@ -856,7 +859,6 @@ class EDD_Simple_Shipping {
 		update_post_meta( $payment_id, '_edd_payment_shipping_status', '1' );
 
 	}
-
 
 	/**
 	 * Display shipping details in the View Details popup
