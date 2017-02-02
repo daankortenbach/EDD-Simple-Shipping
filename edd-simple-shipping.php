@@ -1118,7 +1118,7 @@ class EDD_Simple_Shipping {
 function edd_simple_shipping_load() {
 	return EDD_Simple_Shipping::get_instance();
 }
-add_action( 'plugins_loaded', 'edd_simple_shipping_load' );
+add_action( 'plugins_loaded', 'edd_simple_shipping_load', 0 );
 
 /**
  * A nice function name to retrieve the instance that's created on plugins loaded
