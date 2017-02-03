@@ -1174,6 +1174,15 @@ class EDD_Simple_Shipping {
 		exit();
 	}
 
+	/**
+	 * Add a shipping address to the customer meta
+	 *
+	 * @since 2.2.3
+	 * @param int   $customer_id
+	 * @param array $address
+	 *
+	 * @return bool
+	 */
 	public function add_customer_shipping_address( $customer_id = 0, $address = array() ) {
 		global $wpdb;
 		if ( ! is_array( $address ) ) {
@@ -1199,6 +1208,16 @@ class EDD_Simple_Shipping {
 		return $customer->add_meta( 'shipping_address', $address );
 	}
 
+	/**
+	 * Remove a specific customer shipping address
+	 *
+	 * @since 2.2.3
+	 * @param int  $customer_id
+	 * @param bool $address_key
+	 *
+	 * @return bool
+	 *
+	 */
 	public function remove_customer_shipping_address( $customer_id = 0, $address_key = false ) {
 		if ( false === $address_key ) {
 			return false;
@@ -1217,6 +1236,15 @@ class EDD_Simple_Shipping {
 		return $customer->delete_meta( 'shipping_address', $address );
 	}
 
+	/**
+	 * Get a specific customer shipping address
+	 *
+	 * @since 2.2.3
+	 * @param int $customer_id
+	 * @param int $address_key
+	 *
+	 * @return array|boolean
+	 */
 	public function get_customer_shipping_address( $customer_id = 0, $address_key = 0 ) {
 		$addresses = $this->get_customer_shipping_addresses( $customer_id );
 		if ( isset( $addresses[ $address_key ] ) ) {
@@ -1226,6 +1254,14 @@ class EDD_Simple_Shipping {
 		return false;
 	}
 
+	/**
+	 * Get all the customer shipping addresses
+	 *
+	 * @since 2.2.3
+	 * @param int $customer_id
+	 *
+	 * @return array
+	 */
 	public function get_customer_shipping_addresses( $customer_id = 0 ) {
 		$customer = new EDD_Customer( $customer_id );
 		if ( empty( $customer->id ) ) {
@@ -1235,6 +1271,12 @@ class EDD_Simple_Shipping {
 		return $customer->get_meta( 'shipping_address', false );
 	}
 
+	/**
+	 * Output the user shipping addresses on the profile editor
+	 *
+	 * @since 2.2.3
+	 * @return void
+	 */
 	public function profile_editor_addresses() {
 		if ( ! is_user_logged_in() ) {
 			return;
