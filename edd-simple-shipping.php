@@ -626,10 +626,11 @@ class EDD_Simple_Shipping {
 						$options = array();
 						foreach ( $existing_addresses as $key => $values ) {
 							$address_label = array();
-							$address_label[] = ! empty( $values['address'] )  ? $values['address'] : '';
-							$address_label[] = ! empty( $values['city'] )     ? $values['city']    : '';
-							$address_label[] = ! empty( $values['state'] )    ? $values['state']   : '';
-							$address_label[] = ! empty( $values['zip'] )      ? $values['zip']     : '';
+							$address_label[] = ! empty( $values['address'] )  ? $values['address']  : '';
+							$address_label[] = ! empty( $values['address2'] ) ? $values['address2'] : '';
+							$address_label[] = ! empty( $values['city'] )     ? $values['city']     : '';
+							$address_label[] = ! empty( $values['state'] )    ? $values['state']    : '';
+							$address_label[] = ! empty( $values['zip'] )      ? $values['zip']      : '';
 							$address_label   = array_values( $address_label );
 
 							$options[ $key ] = implode( ', ', $address_label );
