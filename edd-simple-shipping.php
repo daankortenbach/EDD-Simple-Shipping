@@ -631,7 +631,7 @@ class EDD_Simple_Shipping {
 							$address_label[] = ! empty( $values['city'] )     ? $values['city']     : '';
 							$address_label[] = ! empty( $values['state'] )    ? $values['state']    : '';
 							$address_label[] = ! empty( $values['zip'] )      ? $values['zip']      : '';
-							$address_label   = array_values( $address_label );
+							$address_label   = array_values( array_filter( $address_label ) );
 
 							$options[ $key ] = implode( ', ', $address_label );
 						}
