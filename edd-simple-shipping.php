@@ -261,11 +261,15 @@ class EDD_Simple_Shipping {
 			foreach ( $prices as $key => $price ) {
 
 				// If it's not the right price ID, move along.
-				if ( (int) $key !== (int) $price_id ) { continue; }
+				if ( (int) $key !== (int) $price_id ) {
+					continue;
+				}
 
 				if ( isset( $price['shipping'] ) && is_array( $price['shipping'] ) ) {
 					// If the region requested isn't set, continue;
-					if ( ! isset( $price['shipping'][ $region ] ) ) { continue; }
+					if ( ! isset( $price['shipping'][ $region ] ) ) {
+						continue;
+					}
 
 					$amount = $price['shipping'][ $region ];
 				} elseif ( isset( $price['shipping'] ) ) {

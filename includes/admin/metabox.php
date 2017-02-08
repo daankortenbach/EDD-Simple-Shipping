@@ -51,7 +51,9 @@ class EDD_Simple_Shipping_Metabox {
 						var enabled  = $(this).is(':checked');
 						var shipping = $('#edd_enable_shipping').is(':checked');
 
-						if ( ! shipping ) { return; }
+						if ( ! shipping ) {
+							return;
+						}
 
 						if ( enabled ) {
 							$('.edd_prices_shipping').show();
