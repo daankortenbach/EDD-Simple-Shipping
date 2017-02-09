@@ -292,7 +292,7 @@ class EDD_Simple_Shipping_Tracking {
 	}
 
 	public function get_default_tracking_email_message() {
-		return __( "Dear", "edd-simple-shipping" ) . " {name},\n\n" . sprintf( __( "Your recent order %s has been shipped. Your tracking information is below.", "edd-simple-shipping" ), '{payment_id}' ) . "\n\n{tracking_ids}\n\n{sitename}";
+		return __( "Dear {name},\n\nYour recent order {payment_id} has been shipped. Your tracking information is below.\n\n{tracking_ids}\n\n{sitename}", "edd-simple-shipping" );
 	}
 
 }
