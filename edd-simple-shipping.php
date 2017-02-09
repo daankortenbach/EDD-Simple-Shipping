@@ -144,11 +144,23 @@ class EDD_Simple_Shipping {
 		}
 	}
 
+	/**
+	 * Register any scripts we need for Simple Shipping
+	 *
+	 * @since 2.3
+	 * @return void
+	 */
 	public function admin_scripts() {
 		wp_register_script( 'edd-simple-shipping-admin', $this->plugin_url . '/assets/js/admin-scripts.js', array( 'jquery' ), EDD_SIMPLE_SHIPPING_VERSION );
 		wp_enqueue_script( 'edd-simple-shipping-admin' );
 	}
 
+	/**
+	 * Register any styles we need for Simple Shipping
+	 *
+	 * @since 2.3
+	 * @return void
+	 */
 	public function enqueue_styles() {
 		$needs_styles = edd_is_purchase_history_page();
 

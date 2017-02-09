@@ -1,7 +1,19 @@
 <?php
 
+/**
+ * Class EDD_Simple_Shipping_Tracking
+ * @since 2.3
+ * Hooks, filters, and methods for the Tracking IDs features of Simple Shipping
+ */
 class EDD_Simple_Shipping_Tracking {
 
+	/**
+	 * Load up all the hooks needed for tracking IDS
+	 *
+	 * @since 2.3
+	 *
+	 * @return false;
+	 */
 	public function __construct() {
 		add_action( 'edd_view_order_details_billing_after', array( $this, 'payment_tracking' ) );
 		add_action( 'edd_updated_edited_purchase',          array( $this, 'save_edited_payment' ), 10, 1 );
@@ -11,6 +23,14 @@ class EDD_Simple_Shipping_Tracking {
 		add_action( 'edd_purchase_history_row_end',         array( $this, 'order_details_row' ), 10, 2 );
 	}
 
+	/**
+	 * Show the tracking ID metabox on the view order details
+	 *
+	 * @since 2.3
+	 * @param $payment_id
+	 *
+	 * @return void
+	 */
 	public function payment_tracking( $payment_id ) {
 		$needs_shipping = edd_simple_shipping()->payment_needs_shipping( $payment_id );
 
@@ -75,6 +95,16 @@ class EDD_Simple_Shipping_Tracking {
 		<?php
 	}
 
+	/**
+	 * Display the input field for a tracking ID in the view order details metabox.
+	 *
+	 * @since 2.3
+	 *
+	 * @param       $key
+	 * @param array $args
+	 *
+	 * @return void
+	 */
 	private function tracking_input_field( $key, $args = array() ) {
 		$defaults = array( 'name' => sprintf( __( 'Parcel %s', 'edd-simple-shipping' ), $key + 1 ), 'tracking_id' => '' );
 		$args = wp_parse_args( $args, $defaults );
@@ -109,6 +139,14 @@ class EDD_Simple_Shipping_Tracking {
 		<?php
 	}
 
+	/**
+	 * Save the post meta for the order details when adding tracking IDs
+	 *
+	 * @since 2.3
+	 * @param $payment_id
+	 *
+	 * @return void
+	 */
 	public function save_edited_payment( $payment_id ) {
 		$tracking_ids = $_POST['edd_tracking_ids'];
 
@@ -125,10 +163,25 @@ class EDD_Simple_Shipping_Tracking {
 		}
 	}
 
+	/**
+	 * Register the `tracking_ids` email tag
+	 *
+	 * @since 2.3
+	 *
+	 * @return void
+	 */
 	public function add_email_tag() {
 		edd_add_email_tag( 'tracking_ids', __( 'Show saved tracking ids for payment.', 'edd-simple-shipping' ), array( $this, 'output_tracking_ids_tag' ) );
 	}
 
+	/**
+	 * Output a UL of the tracking IDs for a payment
+	 *
+	 * @since 2.3
+	 * @param int $payment_id
+	 *
+	 * @return string
+	 */
 	public function output_tracking_ids_tag( $payment_id = 0 ) {
 
 		// Start a buffer so we don't output any errors into the email.
@@ -148,6 +201,16 @@ class EDD_Simple_Shipping_Tracking {
 
 	}
 
+	/**
+	 * Replace the tracking_ids email tag with the actual email tag list.
+	 *
+	 * @since 2.3
+	 *
+	 * @param $message
+	 * @param $payment_id
+	 *
+	 * @return mixed
+	 */
 	public function filter_template_tags( $message, $payment_id ) {
 		$tracking_ids = $this->output_tracking_ids_tag( $payment_id );
 		$message      = str_replace( '{tracking_ids}', $tracking_ids, $message );
@@ -155,6 +218,14 @@ class EDD_Simple_Shipping_Tracking {
 		return $message;
 	}
 
+	/**
+	 * Use EDD_Emails to send the tracking IDs to the customer
+	 *
+	 * @since 2.3
+	 *
+	 * @param $post
+	 * @return void
+	 */
 	public function send_tracking( $post ) {
 		$nonce = ! empty( $post['nonce'] ) ? $post['nonce'] : false;
 		if ( ! wp_verify_nonce( $nonce, 'edd-ti-send-tracking' ) ) { wp_die(); }
@@ -206,6 +277,14 @@ class EDD_Simple_Shipping_Tracking {
 		die();
 	}
 
+	/**
+	 * Check if a payment ID has tracking information
+	 *
+	 * @since 2.3
+	 * @param int $payment_id
+	 *
+	 * @return bool
+	 */
 	public function payment_has_tracking( $payment_id = 0 ) {
 		$payment = new EDD_Payment( $payment_id );
 
@@ -218,6 +297,14 @@ class EDD_Simple_Shipping_Tracking {
 		return ! empty( $has_tracking ) ? true : false;
 	}
 
+	/**
+	 * Get the tracking IDs for a payment.
+	 *
+	 * @since 2.3
+	 * @param int $payment_id
+	 *
+	 * @return bool|mixed
+	 */
 	public function get_payment_tracking( $payment_id = 0 ) {
 		$payment = new EDD_Payment( $payment_id );
 
@@ -230,6 +317,14 @@ class EDD_Simple_Shipping_Tracking {
 		return ! empty( $has_tracking ) ? $has_tracking : false;
 	}
 
+	/**
+	 * Check if we've sent tracking IDs to a customer before.
+	 *
+	 * @since 2.3
+	 * @param int $payment_id
+	 *
+	 * @return array|bool|mixed
+	 */
 	public function payment_tracking_last_sent( $payment_id = 0 ) {
 		$payment = new EDD_Payment( $payment_id );
 		$tracking_sent = $payment->get_meta( '_edd_payment_tracking_sent' );
@@ -244,6 +339,13 @@ class EDD_Simple_Shipping_Tracking {
 		return $tracking_sent;
 	}
 
+	/**
+	 * Output a UL of the tracking IDs for the front end.
+	 *
+	 * @since 2.3
+	 *
+	 * @param $payment_id
+	 */
 	public function output_tracking_links( $payment_id ) {
 		$tracking = $this->get_payment_tracking( $payment_id );
 
@@ -264,16 +366,39 @@ class EDD_Simple_Shipping_Tracking {
 		}
 	}
 
+	/**
+	 * Generate a link to AfterShip for a tracking ID
+	 *
+	 * @since 2.3
+	 *
+	 * @param $tracking_id
+	 *
+	 * @return mixed|void
+	 */
 	public function get_tracking_link( $tracking_id ) {
 		return apply_filters( 'edd_simple_shipping_tracking_link', 'https://track.aftership.com/' . $tracking_id, $tracking_id);
 	}
 
+	/**
+	 * Show the 'Tracking' header on the order list.
+	 *
+	 * @since 2.3
+	 *
+	 * @return void
+	 */
 	public function order_details_header() {
 		?>
 		<th class="edd_purchase_tracking"><?php _e( 'Tracking', 'edd-tracking-info' ); ?></th>
 		<?
 	}
 
+	/**
+	 * Show the 'Tracking' content on the order list.
+	 *
+	 * @since 2.3
+	 *
+	 * @return void
+	 */
 	public function order_details_row( $payment_id, $purchase_data ) {
 		$tracking_ids = $this->get_payment_tracking( $payment_id );
 		?>
@@ -291,6 +416,13 @@ class EDD_Simple_Shipping_Tracking {
 		<?php
 	}
 
+	/**
+	 * Get the default tracking ID email content
+	 *
+	 * @since 2.3
+	 *
+	 * @return mixed|string|void
+	 */
 	public function get_default_tracking_email_message() {
 		return __( "Dear {name},\n\nYour recent order {payment_id} has been shipped. Your tracking information is below.\n\n{tracking_ids}\n\n{sitename}", "edd-simple-shipping" );
 	}
