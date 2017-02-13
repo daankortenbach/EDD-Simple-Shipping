@@ -23,6 +23,14 @@ class EDD_Simple_shipping_Settings {
 		return $sections;
 	}
 
+	/**
+	 * Add Simple Shipping emails section
+	 *
+	 * @since 2.2.2
+	 *
+	 * @access public
+	 * @return array
+	 */
 	public function emails_section( $sections ) {
 		$sections['edd-simple-shipping-emails'] = __( 'Simple Shipping', 'edd-simple-shipping' );
 		return $sections;
