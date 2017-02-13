@@ -9,6 +9,7 @@ jQuery(document).ready(function ($) {
 		var nonce           = $('#edd-ti-send-tracking').val();
 		var notice_wrapper  = $('.edd-tracking-info-email-message');
 
+		notice_wrapper.hide();
 		notice_wrapper.html('').removeClass('edd-ti-success edd-ti-fail');
 
 		var postData = {
@@ -24,6 +25,7 @@ jQuery(document).ready(function ($) {
 			} else {
 				notice_wrapper.addClass('edd-ti-fail');
 			}
+			notice_wrapper.show();
 			notice_wrapper.html(response.message);
 			spinner.css('visibility', 'hidden');
 			$(this).prop('disabled', '');
