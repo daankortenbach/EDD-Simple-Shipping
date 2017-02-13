@@ -81,10 +81,9 @@ class EDD_Simple_Shipping_Tracking {
 					</table>
 				</div>
 				<?php if ( ! empty( $tracking_ids ) ) : ?>
-				<p>
+				<p class="edd-ss-send-tracking-wrapper">
 					<?php wp_nonce_field( 'edd-ti-send-tracking', 'edd-ti-send-tracking', false, true ); ?>
-					<?php $notify_button_text = empty( $was_sent ) ? __( 'Send Tracking Info', 'edd-simple-shipping' ) : __( 'Resend Tracking Info', 'edd-simple-shipping' ); ?>
-					<span class="button-secondary" id="edd-tracking-info-notify-customer" data-payment="<?php echo $payment_id; ?>"><?php echo $notify_button_text; ?></span>
+					<?php $notify_button_text = empty( $was_sent ) ? __( 'Send Tracking Info', 'edd-simple-shipping' ) : __( 'Resend Tracking Info', 'edd-simple-shipping' ); ?><span class="button-secondary" id="edd-tracking-info-notify-customer" data-payment="<?php echo $payment_id; ?>"><?php echo $notify_button_text; ?></span>
 					<span class="edd-tracking-info-email-message"></span>
 					<span class="spinner"></span>
 				</p>

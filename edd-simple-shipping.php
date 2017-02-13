@@ -153,6 +153,9 @@ class EDD_Simple_Shipping {
 	public function admin_scripts() {
 		wp_register_script( 'edd-simple-shipping-admin', $this->plugin_url . '/assets/js/admin-scripts.js', array( 'jquery' ), EDD_SIMPLE_SHIPPING_VERSION );
 		wp_enqueue_script( 'edd-simple-shipping-admin' );
+
+		wp_register_style( 'edd-simple-shipping-admin', $this->plugin_url . '/assets/css/admin-styles.css', EDD_SIMPLE_SHIPPING_VERSION );
+		wp_enqueue_style( 'edd-simple-shipping-admin' );
 	}
 
 	/**

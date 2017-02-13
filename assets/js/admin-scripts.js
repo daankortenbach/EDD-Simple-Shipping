@@ -26,7 +26,7 @@ jQuery(document).ready(function ($) {
 			}
 			notice_wrapper.html(response.message);
 			spinner.css('visibility', 'hidden');
-			$(this).removeAttr('disabled');
+			$(this).attr('disabled', '');
 		}, 'json');
 
 	});
