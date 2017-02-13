@@ -61,6 +61,14 @@ class EDD_Simple_shipping_Settings {
 		return array_merge( $settings, $simple_shipping_settings );
 	}
 
+	/**
+	 * Display the email settings for Simple Shipping
+	 *
+	 * @since 2.3
+	 * @param $settings
+	 *
+	 * @return array
+	 */
 	public function emails( $settings ) {
 		$simple_shipping_settings = array(
 			array(
