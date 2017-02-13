@@ -339,33 +339,6 @@ class EDD_Simple_Shipping_Tracking {
 	}
 
 	/**
-	 * Output a UL of the tracking IDs for the front end.
-	 *
-	 * @since 2.3
-	 *
-	 * @param $payment_id
-	 */
-	public function output_tracking_links( $payment_id ) {
-		$tracking = $this->get_payment_tracking( $payment_id );
-
-		if ( ! empty( $tracking ) ) {
-			?>
-			<ul class="edd-shipping-tracking-ids">
-			<?php
-			foreach( $tracking as $tracking_id ) {
-				?>
-				<li>
-					<a href="<?php echo $this->get_tracking_link( $tracking_id['tracking_id'] ); ?>" target="_blank"><?php echo $tracking_id['name']; ?></a>
-				</li>
-				<?php
-			}
-			?>
-			</ul>
-			<?php
-		}
-	}
-
-	/**
 	 * Generate a link to AfterShip for a tracking ID
 	 *
 	 * @since 2.3
@@ -401,17 +374,15 @@ class EDD_Simple_Shipping_Tracking {
 	public function order_details_row( $payment_id, $purchase_data ) {
 		$tracking_ids = $this->get_payment_tracking( $payment_id );
 		?>
-		<td class="edd-order-details-tracking-ids">
+			<td>
 			<?php if ( $tracking_ids ) : ?>
-				<ul>
 				<?php foreach ( $tracking_ids as $tracking_id ) : ?>
-					<li><a href="<?php echo $this->get_tracking_link( $tracking_id['tracking_id'] ); ?>" target="_blank"><?php echo $tracking_id['tracking_id']; ?></a></li>
+					<span class="edd-shipping-tracking-id"><a href="<?php echo $this->get_tracking_link( $tracking_id['tracking_id'] ); ?>" target="_blank"><?php echo $tracking_id['tracking_id']; ?></a></span>
 				<?php endforeach; ?>
-				</ul>
 			<?php else : ?>
 				&mdash;
 			<?php endif; ?>
-		</td>
+			</td>
 		<?php
 	}
 
