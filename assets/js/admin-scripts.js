@@ -3,7 +3,7 @@ jQuery(document).ready(function ($) {
 		e.preventDefault();
 		var spinner = $(this).parent().find('.spinner');
 		spinner.css('visibility', 'visible');
-		$(this).attr('disabled', 'disabled');
+		$(this).prop('disabled', 'disabled');
 
 		var payment_id      = $(this).data('payment');
 		var nonce           = $('#edd-ti-send-tracking').val();
@@ -26,7 +26,7 @@ jQuery(document).ready(function ($) {
 			}
 			notice_wrapper.html(response.message);
 			spinner.css('visibility', 'hidden');
-			$(this).attr('disabled', '');
+			$(this).prop('disabled', '');
 		}, 'json');
 
 	});
