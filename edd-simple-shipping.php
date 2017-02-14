@@ -370,7 +370,7 @@ class EDD_Simple_Shipping {
 			return;
 		}
 
-		$cart_contents = edd_get_cart_contents();
+		$cart_contents = edd_get_cart_content_details();
 
 		if( ! is_array( $cart_contents ) ) {
 			return;
@@ -418,11 +418,22 @@ class EDD_Simple_Shipping {
 
 			}
 
-			if( $amount > 0 ) {
+			$has_shipping = false;
+			$fee_label    = sprintf( __( '%s Shipping', 'edd-simple-shipping' ), get_the_title( $item['id'] ) );
+			if ( ! empty( $item['fees'] ) ) {
+				foreach ( $item['fees'] as $fee ) {
+					if ( $fee['label'] === $fee_label ) {
+						$has_shipping = true;
+						break;
+					}
+				}
+			}
+
+			if( $amount > 0 && false === $has_shipping ) {
 
 				EDD()->fees->add_fee( array(
 					'amount'      => $amount,
-					'label'       => sprintf( __( '%s Shipping', 'edd-simple-shipping' ), get_the_title( $item['id'] ) ),
+					'label'       => $fee_label,
 					'id'          => 'simple_shipping_' . $key,
 					'download_id' => $item['id'],
 					'price_id'	  => isset( $item['options']['price_id'] ) ? $item['options']['price_id'] : null
