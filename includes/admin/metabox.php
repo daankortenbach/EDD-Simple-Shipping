@@ -22,13 +22,48 @@ class EDD_Simple_Shipping_Metabox {
 	public function metabox( $post_id = 0 ) {
 		$currency_position = edd_get_option( 'currency_position', 'before' );
 
-		$enabled       = get_post_meta( $post_id, '_edd_enable_shipping', true );
-		$display       = $enabled ? '' : 'style="display:none;"';
-		$domestic      = get_post_meta( $post_id, '_edd_shipping_domestic', true );
-		$international = get_post_meta( $post_id, '_edd_shipping_international', true );
+		$download = new EDD_Download( $post_id );
+
+		$enabled          = get_post_meta( $post_id, '_edd_enable_shipping', true );
+		$variable_pricing = $download->has_variable_prices();
+		$display          = $enabled && ! $variable_pricing ? '' : 'style="display:none;"';
+		$domestic         = get_post_meta( $post_id, '_edd_shipping_domestic', true );
+		$international    = get_post_meta( $post_id, '_edd_shipping_international', true );
 		?>
 		<div id="edd_simple_shipping">
-			<script type="text/javascript">jQuery(document).ready(function($) {$('#edd_enable_shipping').on('click',function() {$('#edd_simple_shipping_fields,.edd_prices_shipping').toggle();});});</script>
+			<script type="text/javascript">
+				jQuery(document).ready(function($) {
+					$('#edd_enable_shipping').on('click',function() {
+						var variable_pricing = $('#edd_variable_pricing').is(':checked');
+						var enabled          = $(this).is(':checked');
+						if ( enabled ) {
+							if ( variable_pricing ) {
+								$('.edd_prices_shipping').show();
+							} else {
+								$('#edd_simple_shipping_fields').show();
+							}
+						} else {
+							$('#edd_simple_shipping_fields,.edd_prices_shipping').hide();
+						}
+					});
+
+					$('#edd_variable_pricing').on('click', function() {
+						var enabled  = $(this).is(':checked');
+						var shipping = $('#edd_enable_shipping').is(':checked');
+
+						if ( ! shipping ) {
+							return;
+						}
+
+						if ( enabled ) {
+							$('.edd_prices_shipping').show();
+							$('#edd_simple_shipping_fields').hide();
+						} else {
+							$('#edd_simple_shipping_fields').show();
+							$('.edd_prices_shipping').hide();
+						}
+					});
+				});</script>
 			<p><strong><?php _e( 'Shipping Options', 'edd-simple-shipping' ); ?></strong></p>
 			<p>
 				<label for="edd_enable_shipping">
@@ -104,10 +139,11 @@ class EDD_Simple_Shipping_Metabox {
 	 * @return void
 	 */
 	function price_header( $post_id = 0 ) {
-		$enabled       = get_post_meta( $post_id, '_edd_enable_shipping', true );
-		$display       = $enabled ? '' : 'style="display:none;"';
+		$enabled = get_post_meta( $post_id, '_edd_enable_shipping', true );
+		$styles  = 'width:30%;';
+		$styles .= $enabled ? '' : 'display:none;';
 		?>
-		<th class="edd_prices_shipping"<?php echo $display; ?>><?php _e( 'Shipping', 'edd-simple-shipping' ); ?></th>
+		<th class="edd_prices_shipping" style="<?php echo $styles; ?>"><?php _e( 'Shipping', 'edd-simple-shipping' ); ?></th>
 	<?php
 	}
 
@@ -120,16 +156,43 @@ class EDD_Simple_Shipping_Metabox {
 	 * @return void
 	 */
 	function price_row( $post_id = 0, $price_key = 0, $args = array() ) {
-		$enabled       = get_post_meta( $post_id, '_edd_enable_shipping', true );
-		$display       = $enabled ? '' : 'style="display:none;"';
-		$prices        = edd_get_variable_prices( $post_id );
-		$shipping      = isset( $prices[ $price_key ]['shipping'] );
+		$enabled           = get_post_meta( $post_id, '_edd_enable_shipping', true );
+		$currency_position = edd_get_option( 'currency_position', 'before' );
+		$display           = $enabled ? '' : 'style="display:none;"';
+		$prices            = edd_get_variable_prices( $post_id );
+		$shipping          = isset( $prices[ $price_key ]['shipping'] ) ? $prices[ $price_key ]['shipping'] : false;
+
+		$domestic = '';
+		$international = '';
+
+		if ( is_array( $shipping ) ) {
+			$domestic      = $shipping['domestic'];
+			$international = $shipping['international'];
+		} elseif ( ! empty( $shipping ) ) {
+			$domestic      = get_post_meta( $post_id, '_edd_shipping_domestic', true );
+			$international = get_post_meta( $post_id, '_edd_shipping_international', true );
+		}
 		?>
 		<td class="edd_prices_shipping"<?php echo $display; ?>>
-			<label for="edd_variable_prices[<?php echo $price_key; ?>][shipping]">
-				<input type="checkbox" value="1"<?php checked( true, $shipping ); ?> id="edd_variable_prices[<?php echo $price_key; ?>][shipping]" name="edd_variable_prices[<?php echo $price_key; ?>][shipping]" style="float:left;width:auto;margin:2px 5px 0 0;"/>
-				<span><?php _e( 'Check to enable shipping costs for this price.', 'edd-simple-shipping' ); ?></span>
-			</label>
+
+			<?php _e( 'Domestic', 'edd-simple-shipping' ); ?>
+			<?php if( $currency_position == 'before' ) : ?>
+				<?php echo edd_currency_filter( '' ); ?>
+				<input type="number" min="0" step="0.01" class="small-text" value="<?php esc_attr_e( $domestic ); ?>" id="edd_shipping_domestic" name="edd_variable_prices[<?php echo $price_key; ?>][shipping][domestic]"/>
+			<?php else : ?>
+				<input type="number" min="0" step="0.01" class="small-text" value="<?php esc_attr_e( $domestic ); ?>" id="edd_shipping_domestic" name="edd_variable_prices[<?php echo $price_key; ?>][shipping][domestic]"/>
+				<?php echo edd_currency_filter( '' ); ?>
+			<?php endif; ?>
+
+			<?php _e( 'International', 'edd-simple-shipping' ); ?>
+			<?php if( $currency_position == 'before' ) : ?>
+				<?php echo edd_currency_filter( '' ); ?>
+				<input type="number" min="0" step="0.01" class="small-text" value="<?php esc_attr_e( $international ); ?>" id="edd_shipping_domestic" name="edd_variable_prices[<?php echo $price_key; ?>][shipping][international]"/>
+			<?php else : ?>
+				<input type="number" min="0" step="0.01" class="small-text" value="<?php esc_attr_e( $international ); ?>" id="edd_shipping_domestic" name="edd_variable_prices[<?php echo $price_key; ?>][shipping][international]"/>
+				<?php echo edd_currency_filter( '' ); ?>
+			<?php endif; ?>
+
 		</td>
 	<?php
 	}
