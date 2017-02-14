@@ -102,8 +102,13 @@ class EDD_Simple_Shipping {
 		add_action( 'edd_insert_payment',                    array( $this, 'set_as_not_shipped' ), 10, 2 );
 		add_action( 'edd_edit_payment_bottom',               array( $this, 'edit_payment_option' ) );
 		add_action( 'edd_payments_table_do_bulk_action',     array( $this, 'process_bulk_actions' ), 10, 2 );
+
+		add_action( 'edd_profile_editor_address',            array( $this, 'profile_editor_addresses' ), 10 );
+		add_action( 'edd_profile-remove-shipping-address',   array( $this, 'process_profile_editor_remove_address' ) );
+
 		add_action( 'admin_enqueue_scripts',                 array( $this, 'admin_scripts' ) );
 		add_action( 'wp_enqueue_scripts',                    array( $this, 'enqueue_styles' ) );
+
 	}
 
 	/**
@@ -123,6 +128,7 @@ class EDD_Simple_Shipping {
 		if ( is_admin() ) {
 			require_once $this->plugin_path . '/includes/admin/admin.php';
 			require_once $this->plugin_path . '/includes/admin/metabox.php';
+			require_once $this->plugin_path . '/includes/admin/upgrades.php';
 		}
 
 		// Load all the settings into local variables so we can use them.
@@ -619,6 +625,16 @@ class EDD_Simple_Shipping {
 				$('#edd_simple_shipping_show').change(function() {
 					$('#edd_simple_shipping_fields_wrap').toggle();
 				});
+
+				$('body').on('change', '.edd-existing-shipping-addresses', function() {
+					var existing_value = $(this).val();
+					var target = $('#edd-shipping-new-address-wrapper');
+					if ( 'new' === existing_value ) {
+						target.show();
+					} else {
+						target.hide();
+					}
+				});
 			});</script>
 
 		<div id="edd_simple_shipping">
@@ -634,59 +650,104 @@ class EDD_Simple_Shipping {
 				<fieldset id="edd_simple_shipping_fields">
 					<?php do_action( 'edd_shipping_address_top' ); ?>
 					<legend><?php _e( 'Shipping Details', 'edd-simple-shipping' ); ?></legend>
-					<p id="edd-shipping-address-wrap">
-						<label class="edd-label"><?php _e( 'Shipping Address', 'edd-simple-shipping' ); ?></label>
-						<span class="edd-description"><?php _e( 'The address to ship your purchase to.', 'edd-simple-shipping' ); ?></span>
-						<input type="text" name="shipping_address" class="shipping-address edd-input" placeholder="<?php _e( 'Address line 1', 'edd-simple-shipping' ); ?>"/>
-					</p>
-					<p id="edd-shipping-address-2-wrap">
-						<label class="edd-label"><?php _e( 'Shipping Address Line 2', 'edd-simple-shipping' ); ?></label>
-						<span class="edd-description"><?php _e( 'The suite, apt no, PO box, etc, associated with your shipping address.', 'edd-simple-shipping' ); ?></span>
-						<input type="text" name="shipping_address_2" class="shipping-address-2 edd-input" placeholder="<?php _e( 'Address line 2', 'edd-simple-shipping' ); ?>"/>
-					</p>
-					<p id="edd-shipping-city-wrap">
-						<label class="edd-label"><?php _e( 'Shipping City', 'edd-simple-shipping' ); ?></label>
-						<span class="edd-description"><?php _e( 'The city for your shipping address.', 'edd-simple-shipping' ); ?></span>
-						<input type="text" name="shipping_city" class="shipping-city edd-input" placeholder="<?php _e( 'City', 'edd-simple-shipping' ); ?>"/>
-					</p>
-					<p id="edd-shipping-country-wrap">
-						<label class="edd-label"><?php _e( 'Shipping Country', 'edd-simple-shipping' ); ?></label>
-						<span class="edd-description"><?php _e( 'The country for your shipping address.', 'edd-simple-shipping' ); ?></span>
-						<select name="shipping_country" class="shipping-country edd-select">
-							<?php
-							$countries = edd_get_country_list();
-							foreach( $countries as $country_code => $country ) {
-								echo '<option value="' . $country_code . '">' . $country . '</option>';
+					<?php
+						$existing_addresses = array();
+						if ( is_user_logged_in() ) {
+							$customer  = EDD()->customers->get_customer_by( 'user_id', get_current_user_id() );
+							if ( ! empty( $customer->id ) ) {
+								$existing_addresses = $this->get_customer_shipping_addresses( $customer->id );
 							}
-							?>
-						</select>
-					</p>
-					<p id="edd-shipping-state-wrap">
-						<label class="edd-label"><?php _e( 'Shipping State / Province', 'edd-simple-shipping' ); ?></label>
-						<span class="edd-description"><?php _e( 'The state / province for your shipping address.', 'edd-simple-shipping' ); ?></span>
-						<input type="text" size="6" name="shipping_state_other" id="shipping_state_other" class="shipping-state edd-input" placeholder="<?php _e( 'State / Province', 'edd-simple-shipping' ); ?>" style="display:none;"/>
-						<select name="shipping_state_us" id="shipping_state_us" class="shipping-state edd-select">
-							<?php
-							$states = edd_get_states_list();
-							foreach( $states as $state_code => $state ) {
-								echo '<option value="' . $state_code . '">' . $state . '</option>';
-							}
-							?>
-						</select>
-						<select name="shipping_state_ca" id="shipping_state_ca" class="shipping-state edd-select" style="display: none;">
-							<?php
-							$provinces = edd_get_provinces_list();
-							foreach( $provinces as $province_code => $province ) {
-								echo '<option value="' . $province_code . '">' . $province . '</option>';
-							}
-							?>
-						</select>
-					</p>
-					<p id="edd-shipping-zip-wrap">
-						<label class="edd-label"><?php _e( 'Shipping Zip / Postal Code', 'edd-simple-shipping' ); ?></label>
-						<span class="edd-description"><?php _e( 'The zip / postal code for your shipping address.', 'edd-simple-shipping' ); ?></span>
-						<input type="text" size="4" name="shipping_zip" class="shipping-zip edd-input" placeholder="<?php _e( 'Zip / Postal code', 'edd-simple-shipping' ); ?>"/>
-					</p>
+						}
+
+						$options = array();
+						foreach ( $existing_addresses as $key => $values ) {
+							$address_label = array();
+							$address_label[] = ! empty( $values['address'] )  ? $values['address']  : '';
+							$address_label[] = ! empty( $values['address2'] ) ? $values['address2'] : '';
+							$address_label[] = ! empty( $values['city'] )     ? $values['city']     : '';
+							$address_label[] = ! empty( $values['state'] )    ? $values['state']    : '';
+							$address_label[] = ! empty( $values['zip'] )      ? $values['zip']      : '';
+							$address_label   = array_values( array_filter( $address_label ) );
+
+							$options[ $key ] = implode( ', ', $address_label );
+						}
+
+						$show_address_fields = empty( $options ) ? '' : ' style="display:none;';
+					?>
+					<?php if ( ! empty( $options ) ) : ?>
+					<?php $options['new'] = __( 'Add new address', 'edd-simple-shipping' ); ?>
+					<div class="edd-existing-shipping-addresses-wrapper">
+						<p>
+						<?php
+							echo EDD()->html->select(
+								array(
+									'options'          => $options,
+									'name'             => 'existing_shipping_address',
+									'class'            => 'edd-existing-shipping-addresses',
+									'id'               => 'edd-existing-shipping-addresses',
+									'show_option_all'  => false,
+									'show_option_none' => false,
+								)
+							);
+						?>
+						</p>
+					</div>
+					<?php endif; ?>
+					<div id="edd-shipping-new-address-wrapper"<?php echo $show_address_fields; ?>>
+						<p id="edd-shipping-address-wrap">
+							<label class="edd-label"><?php _e( 'Shipping Address', 'edd-simple-shipping' ); ?></label>
+							<span class="edd-description"><?php _e( 'The address to ship your purchase to.', 'edd-simple-shipping' ); ?></span>
+							<input type="text" name="shipping_address" class="shipping-address edd-input" placeholder="<?php _e( 'Address line 1', 'edd-simple-shipping' ); ?>"/>
+						</p>
+						<p id="edd-shipping-address-2-wrap">
+							<label class="edd-label"><?php _e( 'Shipping Address Line 2', 'edd-simple-shipping' ); ?></label>
+							<span class="edd-description"><?php _e( 'The suite, apt no, PO box, etc, associated with your shipping address.', 'edd-simple-shipping' ); ?></span>
+							<input type="text" name="shipping_address_2" class="shipping-address-2 edd-input" placeholder="<?php _e( 'Address line 2', 'edd-simple-shipping' ); ?>"/>
+						</p>
+						<p id="edd-shipping-city-wrap">
+							<label class="edd-label"><?php _e( 'Shipping City', 'edd-simple-shipping' ); ?></label>
+							<span class="edd-description"><?php _e( 'The city for your shipping address.', 'edd-simple-shipping' ); ?></span>
+							<input type="text" name="shipping_city" class="shipping-city edd-input" placeholder="<?php _e( 'City', 'edd-simple-shipping' ); ?>"/>
+						</p>
+						<p id="edd-shipping-country-wrap">
+							<label class="edd-label"><?php _e( 'Shipping Country', 'edd-simple-shipping' ); ?></label>
+							<span class="edd-description"><?php _e( 'The country for your shipping address.', 'edd-simple-shipping' ); ?></span>
+							<select name="shipping_country" class="shipping-country edd-select">
+								<?php
+								$countries = edd_get_country_list();
+								foreach( $countries as $country_code => $country ) {
+									echo '<option value="' . $country_code . '">' . $country . '</option>';
+								}
+								?>
+							</select>
+						</p>
+						<p id="edd-shipping-state-wrap">
+							<label class="edd-label"><?php _e( 'Shipping State / Province', 'edd-simple-shipping' ); ?></label>
+							<span class="edd-description"><?php _e( 'The state / province for your shipping address.', 'edd-simple-shipping' ); ?></span>
+							<input type="text" size="6" name="shipping_state_other" id="shipping_state_other" class="shipping-state edd-input" placeholder="<?php _e( 'State / Province', 'edd-simple-shipping' ); ?>" style="display:none;"/>
+							<select name="shipping_state_us" id="shipping_state_us" class="shipping-state edd-select">
+								<?php
+								$states = edd_get_states_list();
+								foreach( $states as $state_code => $state ) {
+									echo '<option value="' . $state_code . '">' . $state . '</option>';
+								}
+								?>
+							</select>
+							<select name="shipping_state_ca" id="shipping_state_ca" class="shipping-state edd-select" style="display: none;">
+								<?php
+								$provinces = edd_get_provinces_list();
+								foreach( $provinces as $province_code => $province ) {
+									echo '<option value="' . $province_code . '">' . $province . '</option>';
+								}
+								?>
+							</select>
+						</p>
+						<p id="edd-shipping-zip-wrap">
+							<label class="edd-label"><?php _e( 'Shipping Zip / Postal Code', 'edd-simple-shipping' ); ?></label>
+							<span class="edd-description"><?php _e( 'The zip / postal code for your shipping address.', 'edd-simple-shipping' ); ?></span>
+							<input type="text" size="4" name="shipping_zip" class="shipping-zip edd-input" placeholder="<?php _e( 'Zip / Postal code', 'edd-simple-shipping' ); ?>"/>
+						</p>
+					</div>
 					<?php do_action( 'edd_shipping_address_bottom' ); ?>
 				</fieldset>
 			</div>
@@ -713,34 +774,38 @@ class EDD_Simple_Shipping {
 		// Check to see if shipping is different than billing
 		if( isset( $post_data['edd_use_different_shipping'] ) || ! $this->has_billing_fields() ) {
 
-			// Shipping address is different
+			if ( ! isset( $post_data['existing_shipping_address'] ) || 'new' === $post_data['existing_shipping_address'] ) {
 
-			if( empty( $post_data['shipping_address'] ) ) {
-				edd_set_error( 'missing_address', __( 'Please enter a shipping address', 'edd-simple-shipping' ) );
-			}
+				// Shipping address is different
 
-			if( empty( $post_data['shipping_city'] ) ) {
-				edd_set_error( 'missing_city', __( 'Please enter a city for shipping', 'edd-simple-shipping' ) );
-			}
-
-			if( empty( $post_data['shipping_zip'] ) ) {
-				edd_set_error( 'missing_zip', __( 'Please enter a zip/postal code for shipping', 'edd-simple-shipping' ) );
-			}
-
-			if( empty( $post_data['shipping_country'] ) ) {
-				edd_set_error( 'missing_country', __( 'Please select your country', 'edd-simple-shipping' ) );
-			}
-
-			if( 'US' == $post_data['shipping_country'] ) {
-
-				if( empty( $post_data['shipping_state_us'] ) ) {
-					edd_set_error( 'missing_state', __( 'Please select your state', 'edd-simple-shipping' ) );
+				if ( empty( $post_data[ 'shipping_address' ] ) ) {
+					edd_set_error( 'missing_address', __( 'Please enter a shipping address', 'edd-simple-shipping' ) );
 				}
 
-			} elseif( 'CA' == $post_data['shipping_country'] ) {
+				if ( empty( $post_data[ 'shipping_city' ] ) ) {
+					edd_set_error( 'missing_city', __( 'Please enter a city for shipping', 'edd-simple-shipping' ) );
+				}
 
-				if( empty( $post_data['shipping_state_ca'] ) ) {
-					edd_set_error( 'missing_province', __( 'Please select your province', 'edd-simple-shipping' ) );
+				if ( empty( $post_data[ 'shipping_zip' ] ) ) {
+					edd_set_error( 'missing_zip', __( 'Please enter a zip/postal code for shipping', 'edd-simple-shipping' ) );
+				}
+
+				if ( empty( $post_data[ 'shipping_country' ] ) ) {
+					edd_set_error( 'missing_country', __( 'Please select your country', 'edd-simple-shipping' ) );
+				}
+
+				if ( 'US' == $post_data[ 'shipping_country' ] ) {
+
+					if ( empty( $post_data[ 'shipping_state_us' ] ) ) {
+						edd_set_error( 'missing_state', __( 'Please select your state', 'edd-simple-shipping' ) );
+					}
+
+				} elseif ( 'CA' == $post_data[ 'shipping_country' ] ) {
+
+					if ( empty( $post_data[ 'shipping_state_ca' ] ) ) {
+						edd_set_error( 'missing_province', __( 'Please select your province', 'edd-simple-shipping' ) );
+					}
+
 				}
 
 			}
@@ -780,7 +845,7 @@ class EDD_Simple_Shipping {
 
 
 	/**
-	 * Attach our shipping info to the payment gateway daya
+	 * Attach our shipping info to the payment gateway data
 	 *
 	 * @since 1.0
 	 *
@@ -794,28 +859,35 @@ class EDD_Simple_Shipping {
 		}
 
 		$shipping_info = array();
+		$customer      = EDD()->customers->get_customer_by( 'user_id', get_current_user_id() );
 
 		// Check to see if shipping is different than billing
 		if( isset( $_POST['edd_use_different_shipping'] ) || ! $this->has_billing_fields() ) {
+			if ( ! isset( $_POST['existing_shipping_address'] ) || 'new' === $_POST['existing_shipping_address'] ) {
+				$shipping_info['address']  = sanitize_text_field( $_POST['shipping_address'] );
+				$shipping_info['address2'] = sanitize_text_field( $_POST['shipping_address_2'] );
+				$shipping_info['city']     = sanitize_text_field( $_POST['shipping_city'] );
+				$shipping_info['zip']      = sanitize_text_field( $_POST['shipping_zip'] );
+				$shipping_info['country']  = sanitize_text_field( $_POST['shipping_country'] );
 
-			$shipping_info['address']  = sanitize_text_field( $_POST['shipping_address'] );
-			$shipping_info['address2'] = sanitize_text_field( $_POST['shipping_address_2'] );
-			$shipping_info['city']     = sanitize_text_field( $_POST['shipping_city'] );
-			$shipping_info['zip']      = sanitize_text_field( $_POST['shipping_zip'] );
-			$shipping_info['country']  = sanitize_text_field( $_POST['shipping_country'] );
-
-			// Shipping address is different
-			switch ( $_POST['shipping_country'] ) :
-				case 'US' :
-					$shipping_info['state'] = isset( $_POST['shipping_state_us'] )	 ? sanitize_text_field( $_POST['shipping_state_us'] ) 	 : '';
-					break;
-				case 'CA' :
-					$shipping_info['state'] = isset( $_POST['shipping_state_ca'] )	 ? sanitize_text_field( $_POST['shipping_state_ca'] ) 	 : '';
-					break;
-				default :
-					$shipping_info['state'] = isset( $_POST['shipping_state_other'] ) ? sanitize_text_field( $_POST['shipping_state_other'] ) : '';
-					break;
-			endswitch;
+				// Shipping address is different
+				switch ( $_POST['shipping_country'] ) :
+					case 'US' :
+						$shipping_info['state'] = isset( $_POST['shipping_state_us'] ) ? sanitize_text_field( $_POST['shipping_state_us'] ) : '';
+						break;
+					case 'CA' :
+						$shipping_info['state'] = isset( $_POST['shipping_state_ca'] ) ? sanitize_text_field( $_POST['shipping_state_ca'] ) : '';
+						break;
+					default :
+						$shipping_info['state'] = isset( $_POST['shipping_state_other'] ) ? sanitize_text_field( $_POST['shipping_state_other'] ) : '';
+						break;
+				endswitch;
+			} else {
+				if ( ! empty( $customer->id ) ) {
+					$address_key   = absint( $_POST['existing_shipping_address'] );
+					$shipping_info = $this->get_customer_shipping_address( $customer->id, $address_key );
+				}
+			}
 
 		} else {
 
@@ -826,6 +898,10 @@ class EDD_Simple_Shipping {
 			$shipping_info['state']    = sanitize_text_field( $_POST['card_state'] );
 			$shipping_info['country']  = sanitize_text_field( $_POST['billing_country'] );
 
+		}
+
+		if ( ! empty( $customer->id ) ) {
+			$this->add_customer_shipping_address( $customer->id, $shipping_info );
 		}
 
 		$purchase_data['user_info']['shipping_info'] = $shipping_info;
@@ -1060,7 +1136,7 @@ class EDD_Simple_Shipping {
 	public function payment_receipt_after( $payment, $edd_receipt_args ) {
 
 		$user_info = edd_get_payment_meta_user_info( $payment->ID );
-		$address   = ! empty( $user_info[ 'shipping_info' ] ) ? $user_info[ 'shipping_info' ] : false;
+		$address   = ! empty( $user_info['shipping_info'] ) ? $user_info['shipping_info'] : false;
 
 		if ( ! $address ) {
 			return;
@@ -1157,6 +1233,228 @@ class EDD_Simple_Shipping {
 		exit();
 	}
 
+	/**
+	 * Add a shipping address to the customer meta
+	 *
+	 * @since 2.2.3
+	 * @param int   $customer_id
+	 * @param array $address
+	 *
+	 * @return bool
+	 */
+	public function add_customer_shipping_address( $customer_id = 0, $address = array() ) {
+		global $wpdb;
+		if ( ! is_array( $address ) ) {
+			return false;
+		}
+
+		$customer = new EDD_Customer( $customer_id );
+		if ( empty( $customer->id ) ) {
+			return false;
+		}
+
+		ksort( $address );
+
+		// See if we have an existing address
+		$serialized_address = serialize( $address );
+		$address_query      = $wpdb->prepare( "SELECT meta_id FROM $wpdb->customermeta WHERE customer_id = %d AND meta_key ='shipping_address' AND meta_value = %s LIMIT 1", $customer->id, $serialized_address );
+		$address_exists     = $wpdb->get_var( $address_query );
+
+		if ( ! empty( $address_exists ) ) {
+			return false;
+		}
+
+		return $customer->add_meta( 'shipping_address', $address );
+	}
+
+	/**
+	 * Remove a specific customer shipping address
+	 *
+	 * @since 2.2.3
+	 * @param int  $customer_id
+	 * @param bool $address_key
+	 *
+	 * @return bool
+	 *
+	 */
+	public function remove_customer_shipping_address( $customer_id = 0, $address_key = false ) {
+		if ( false === $address_key ) {
+			return false;
+		}
+
+		$customer = new EDD_Customer( $customer_id );
+		if ( empty( $customer->id ) ) {
+			return false;
+		}
+
+		$address = $this->get_customer_shipping_address( $customer_id, $address_key );
+		if ( empty( $address ) ) {
+			return false;
+		}
+
+		return $customer->delete_meta( 'shipping_address', $address );
+	}
+
+	/**
+	 * Get a specific customer shipping address
+	 *
+	 * @since 2.2.3
+	 * @param int $customer_id
+	 * @param int $address_key
+	 *
+	 * @return array|boolean
+	 */
+	public function get_customer_shipping_address( $customer_id = 0, $address_key = 0 ) {
+		$addresses = $this->get_customer_shipping_addresses( $customer_id );
+		if ( isset( $addresses[ $address_key ] ) ) {
+			return $addresses[ $address_key ];
+		}
+
+		return false;
+	}
+
+	/**
+	 * Get all the customer shipping addresses
+	 *
+	 * @since 2.2.3
+	 * @param int $customer_id
+	 *
+	 * @return array
+	 */
+	public function get_customer_shipping_addresses( $customer_id = 0 ) {
+		$customer = new EDD_Customer( $customer_id );
+		if ( empty( $customer->id ) ) {
+			return array();
+		}
+
+		return $customer->get_meta( 'shipping_address', false );
+	}
+
+	/**
+	 * Output the user shipping addresses on the profile editor
+	 *
+	 * @since 2.2.3
+	 * @return void
+	 */
+	public function profile_editor_addresses() {
+		if ( ! is_user_logged_in() ) {
+			return;
+		}
+
+		$customer = EDD()->customers->get_customer_by( 'user_id', get_current_user_id() );
+		if ( empty( $customer->id ) ) {
+			return;
+		}
+
+		$addresses = $this->get_customer_shipping_addresses( $customer->id );
+		if ( empty( $addresses ) ) {
+			return;
+		}
+		?>
+
+		<?php if ( ! empty( $addresses ) ) : ?>
+			<legend for="edd_shipping_addresses"><?php _e( 'Shipping Addresses', 'edd-simple-shipping' ); ?></legend>
+			<ul class="edd-profile-shipping-addresses">
+			<?php foreach ( $addresses as $key => $address ) : ?>
+				<li class="edd-profile-shipping-address">
+					<span class="edd-ss-address"><?php echo $address['address']; ?></span>
+					<span class="actions">
+						&mdash;
+						<?php
+							$remove_url = wp_nonce_url(
+								add_query_arg(
+									array(
+										'address_key' => $key,
+										'edd_action'  => 'profile-remove-shipping-address',
+										'redirect'    => esc_url( edd_get_current_page_url() ),
+									)
+								),
+								'edd-remove-customer-shipping-address'
+							);
+						?>
+						<a href="<?php echo $remove_url ?>" class="delete"><?php _e( 'Remove', 'edd-simple-shipping' ); ?></a>
+					</span>
+					<br />
+					<?php if ( ! empty( $address['address2'] ) ) : ?>
+						<span class="edd-ss-address2"><?php echo $address['address2']; ?></span><br />
+					<?php endif; ?>
+
+					<?php if ( ! empty( $address['city'] ) ) : ?>
+						<span class="edd-ss-city"><?php echo $address['city']; ?></span>
+					<?php endif; ?>
+
+					<?php if ( ! empty( $address['state'] ) ) : ?>
+						<span class="edd-ss-state">
+							<?php if ( ! empty( $address['city'] ) ) : ?>,&nbsp;<?php endif; ?>
+							<?php echo $address['state']; ?>
+						</span>
+						<br />
+					<?php endif; ?>
+
+					<?php if ( ! empty( $address['country'] ) ) : ?>
+						<span class="edd-ss-country"><?php echo $address['country']; ?></span><br />
+					<?php endif; ?>
+
+					<?php if ( ! empty( $address['zip'] ) ) : ?>
+						<span class="edd-ss-zip"><?php echo $address['zip']; ?></span><br />
+					<?php endif; ?>
+				</li>
+			<?php endforeach; ?>
+			</ul>
+		<?php endif; ?>
+
+		<?php
+	}
+
+	/**
+	 * Process the 'remove' URL on the profile editor when customers wish to remove a shipping address
+	 *
+	 * @since  2.2.3
+	 * @return void
+	 */
+	function process_profile_editor_remove_address() {
+		if ( ! is_user_logged_in() ) {
+			return false;
+		}
+
+		// Pending users can't edit their profile
+		if ( edd_user_pending_verification() ) {
+			return false;
+		}
+
+		// Nonce security
+		if ( ! wp_verify_nonce( $_GET['_wpnonce'], 'edd-remove-customer-shipping-address' ) ) {
+			return false;
+		}
+
+		if ( ! isset( $_GET['address_key'] ) || (int) $_GET['address_key'] !== absint( $_GET['address_key'] ) ) {
+			return false;
+		}
+
+		$customer = new EDD_Customer( get_current_user_id(), true );
+
+		if ( (int) $customer->user_id !== (int) get_current_user_id() ) {
+			return;
+		}
+
+		if ( $this->remove_customer_shipping_address( $customer->id, absint( $_GET['address_key'] ) ) ) {
+
+			$url = add_query_arg( 'updated', true, $_GET['redirect'] );
+
+			$user          = wp_get_current_user();
+			$user_login    = ! empty( $user->user_login ) ? $user->user_login : 'EDDBot';
+			$customer_note = __( sprintf( 'Shipping address removed by %s', $user_login ), 'edd-simple-shipping' );
+			$customer->add_note( $customer_note );
+
+		} else {
+			edd_set_error( 'profile-remove-shipping_address-failure', __( 'Error removing shipping address from profile. Please try again later.', 'edd-simple-shipping' ) );
+			$url = $_GET['redirect'];
+		}
+
+		wp_safe_redirect( $url );
+		exit;
+	}
+
 }
 
 
@@ -1182,3 +1480,27 @@ add_action( 'plugins_loaded', 'edd_simple_shipping_load', 0 );
 function edd_simple_shipping() {
 	return edd_simple_shipping_load();
 }
+
+function edd_simple_shipping_install() {
+
+	$current_version = get_option( 'edd_simple_shipping_version' );
+
+	if ( ! $current_version ) {
+
+		require_once untrailingslashit( plugin_dir_path( __FILE__ ) ) . '/includes/admin/upgrades.php';
+
+		// When new upgrade routines are added, mark them as complete on fresh install
+		$upgrade_routines = array(
+			'ss_upgrade_customer_addresses',
+		);
+
+		foreach ( $upgrade_routines as $upgrade ) {
+			edd_set_upgrade_complete( $upgrade );
+		}
+
+	}
+
+	add_option( 'edd_simple_shipping_version', EDD_SIMPLE_SHIPPING_VERSION, '', false );
+
+}
+register_activation_hook( __FILE__, 'edd_simple_shipping_install' );
