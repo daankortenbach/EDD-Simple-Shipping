@@ -1374,6 +1374,11 @@ class EDD_Simple_Shipping {
 		}
 
 		$customer = new EDD_Customer( get_current_user_id(), true );
+
+		if ( (int) $customer->user_id !== (int) get_current_user_id() ) {
+			return;
+		}
+
 		if ( $this->remove_customer_shipping_address( $customer->id, absint( $_GET['address_key'] ) ) ) {
 
 			$url = add_query_arg( 'updated', true, $_GET['redirect'] );
