@@ -40,6 +40,7 @@ class EDD_Simple_Shipping {
 	public $settings;
 	public $metabox;
 	public $admin;
+	public $tracking;
 	public $fes;
 
 	/**
@@ -101,8 +102,13 @@ class EDD_Simple_Shipping {
 		add_action( 'edd_insert_payment',                    array( $this, 'set_as_not_shipped' ), 10, 2 );
 		add_action( 'edd_edit_payment_bottom',               array( $this, 'edit_payment_option' ) );
 		add_action( 'edd_payments_table_do_bulk_action',     array( $this, 'process_bulk_actions' ), 10, 2 );
+
 		add_action( 'edd_profile_editor_address',            array( $this, 'profile_editor_addresses' ), 10 );
-		add_action( 'edd_profile-remove-shipping-address',       array( $this, 'process_profile_editor_remove_address' ) );
+		add_action( 'edd_profile-remove-shipping-address',   array( $this, 'process_profile_editor_remove_address' ) );
+
+		add_action( 'admin_enqueue_scripts',                 array( $this, 'admin_scripts' ) );
+		add_action( 'wp_enqueue_scripts',                    array( $this, 'enqueue_styles' ) );
+
 	}
 
 	/**
@@ -117,6 +123,7 @@ class EDD_Simple_Shipping {
 
 		// Include the necessary files.
 		require_once $this->plugin_path . '/includes/admin/settings.php';
+		require_once $this->plugin_path . '/includes/tracking.php';
 
 		if ( is_admin() ) {
 			require_once $this->plugin_path . '/includes/admin/admin.php';
@@ -126,6 +133,7 @@ class EDD_Simple_Shipping {
 
 		// Load all the settings into local variables so we can use them.
 		$this->settings = new EDD_Simple_shipping_Settings();
+		$this->tracking = new EDD_Simple_Shipping_Tracking();
 		if ( is_admin() ) {
 			$this->admin = new EDD_Simple_Shipping_Admin();
 			$this->metabox = new EDD_Simple_shipping_Metabox();
@@ -142,6 +150,36 @@ class EDD_Simple_Shipping {
 		}
 	}
 
+	/**
+	 * Register any scripts we need for Simple Shipping
+	 *
+	 * @since 2.3
+	 * @return void
+	 */
+	public function admin_scripts() {
+		wp_register_script( 'edd-simple-shipping-admin', $this->plugin_url . '/assets/js/admin-scripts.js', array( 'jquery' ), EDD_SIMPLE_SHIPPING_VERSION );
+		wp_enqueue_script( 'edd-simple-shipping-admin' );
+
+		wp_register_style( 'edd-simple-shipping-admin', $this->plugin_url . '/assets/css/admin-styles.css', EDD_SIMPLE_SHIPPING_VERSION );
+		wp_enqueue_style( 'edd-simple-shipping-admin' );
+	}
+
+	/**
+	 * Register any styles we need for Simple Shipping
+	 *
+	 * @since 2.3
+	 * @return void
+	 */
+	public function enqueue_styles() {
+		$needs_styles = edd_is_purchase_history_page();
+
+		if ( false === $needs_styles ) {
+			return;
+		}
+
+		wp_register_style( 'edd-simple-shipping-styles', $this->plugin_url . '/assets/css/styles.css', EDD_SIMPLE_SHIPPING_VERSION );
+		wp_enqueue_style( 'edd-simple-shipping-styles' );
+	}
 
 	/**
 	 * Load plugin text domain
@@ -265,8 +303,6 @@ class EDD_Simple_Shipping {
 	 * @return string
 	 */
 	protected function get_base_region( $download_id = 0 ) {
-
-		global $edd_options;
 
 		if( ! empty( $download_id ) ) {
 
@@ -930,6 +966,26 @@ class EDD_Simple_Shipping {
 
 	}
 
+	/**
+	 * Determins if a payment needs shipping.
+	 * @param int $payment_id
+	 *
+	 * @since 2.2.3
+	 * @return bool
+	 */
+	public function payment_needs_shipping( $payment_id = 0 ) {
+		$payment = new EDD_Payment( $payment_id );
+
+		if ( empty( $payment->ID ) ) {
+			return false;
+		}
+
+		$user_info     = edd_get_payment_meta_user_info( $payment->ID );
+
+		$needs_shipping = ! empty( $user_info['shipping_info'] ) ? true : false;
+
+		return apply_filters( 'edd_payment_needs_shipping', $needs_shipping, $payment_id );
+	}
 
 	/**
 	 * Display shipping details in the View Details popup
@@ -945,12 +1001,14 @@ class EDD_Simple_Shipping {
 			$payment_id = isset( $_GET['id'] ) ? absint( $_GET['id'] ) : 0;
 		}
 
-		$user_info     = edd_get_payment_meta_user_info( $payment_id );
+		$needs_shipping = $this->payment_needs_shipping( $payment_id );
 
-		$address = ! empty( $user_info['shipping_info'] ) ? $user_info['shipping_info'] : false;
-
-		if( ! $address )
+		if( ! $needs_shipping ) {
 			return;
+		}
+
+		$user_info = edd_get_payment_meta_user_info( $payment_id );
+		$address   = ! empty( $user_info['shipping_info'] ) ? $user_info['shipping_info'] : array();
 
 		$status  = get_post_meta( $payment_id, '_edd_payment_shipping_status', true );
 
