@@ -360,7 +360,7 @@ class EDD_Simple_Shipping_Tracking {
 	 */
 	public function order_details_header() {
 		?>
-		<th class="edd_purchase_tracking"><?php _e( 'Tracking', 'edd-tracking-info' ); ?></th>
+		<th class="edd_purchase_tracking"><?php _e( 'Shipping', 'edd-tracking-info' ); ?></th>
 		<?
 	}
 
@@ -372,13 +372,18 @@ class EDD_Simple_Shipping_Tracking {
 	 * @return void
 	 */
 	public function order_details_row( $payment_id, $purchase_data ) {
-		$tracking_ids = $this->get_payment_tracking( $payment_id );
+		$tracking_ids   = $this->get_payment_tracking( $payment_id );
+		$needs_shipping = edd_simple_shipping()->payment_needs_shipping( $payment_id );
+		$payment_status = edd_get_payment_status( $payment_id );
 		?>
 			<td>
 			<?php if ( $tracking_ids ) : ?>
 				<?php foreach ( $tracking_ids as $tracking_id ) : ?>
 					<span class="edd-shipping-tracking-id"><a href="<?php echo $this->get_tracking_link( $tracking_id['tracking_id'] ); ?>" target="_blank"><?php echo $tracking_id['tracking_id']; ?></a></span>
 				<?php endforeach; ?>
+			<?php elseif ( $needs_shipping && ( 'complete' === $payment_status || 'publish' === $payment_status ) ) : ?>
+				<?php $shipped_status = get_post_meta( $payment_id, '_edd_payment_shipping_status', true ); ?>
+				<?php echo 2 === (int) $shipped_status ? __( 'Shipped', 'edd-simple-shipping' ) : __( 'Pending Shipping', 'edd-simple-shipping' ); ?>
 			<?php else : ?>
 				&mdash;
 			<?php endif; ?>
