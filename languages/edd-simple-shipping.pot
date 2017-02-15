@@ -4,7 +4,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Easy Digital Downloads - Simple Shipping 2.2.2\n"
 "Report-Msgid-Bugs-To: https://easydigitaldownloads.com/support\n"
-"POT-Creation-Date: 2017-02-15 02:40:34+00:00\n"
+"POT-Creation-Date: 2017-02-15 02:43:26+00:00\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=utf-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -223,7 +223,7 @@ msgstr ""
 msgid "Set as Shipped"
 msgstr ""
 
-#: includes/admin/admin.php:125
+#: includes/admin/admin.php:125 includes/tracking.php:386
 msgid "Shipped"
 msgstr ""
 
@@ -316,7 +316,7 @@ msgid "International Rate:"
 msgstr ""
 
 #: includes/admin/metabox.php:146 includes/integrations/edd-fes.php:27
-#: includes/integrations/edd-fes.php:40
+#: includes/integrations/edd-fes.php:40 includes/tracking.php:363
 msgid "Shipping"
 msgstr ""
 
@@ -475,11 +475,11 @@ msgstr ""
 msgid "Tracking information sent to %s."
 msgstr ""
 
-#: includes/tracking.php:363
-msgid "Tracking"
+#: includes/tracking.php:386
+msgid "Shipment Pending"
 msgstr ""
 
-#: includes/tracking.php:397
+#: includes/tracking.php:402
 msgid ""
 "Dear {name},\n"
 "\n"
