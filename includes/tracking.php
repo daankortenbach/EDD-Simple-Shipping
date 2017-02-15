@@ -383,7 +383,7 @@ class EDD_Simple_Shipping_Tracking {
 				<?php endforeach; ?>
 			<?php elseif ( $needs_shipping && ( 'complete' === $payment_status || 'publish' === $payment_status ) ) : ?>
 				<?php $shipped_status = get_post_meta( $payment_id, '_edd_payment_shipping_status', true ); ?>
-				<?php echo 2 === (int) $shipped_status ? __( 'Shipped', 'edd-simple-shipping' ) : __( 'Pending Shipping', 'edd-simple-shipping' ); ?>
+				<?php echo 2 === (int) $shipped_status ? __( 'Shipped', 'edd-simple-shipping' ) : __( 'Shipment Pending', 'edd-simple-shipping' ); ?>
 			<?php else : ?>
 				&mdash;
 			<?php endif; ?>
