@@ -9,6 +9,7 @@ class EDD_Simple_Shipping_Admin {
 		add_filter( 'edd_get_payments_args',                 array( $this, 'sort_payments' ) );
 		add_filter( 'edd_payments_table_column',             array( $this, 'display_shipped_column_value' ), 10, 3 );
 		add_filter( 'edd_payments_table_bulk_actions',       array( $this, 'register_bulk_action' ) );
+		add_action( 'edd_payments_table_do_bulk_action',     array( $this, 'process_bulk_actions' ), 10, 2 );
 		add_action( 'edd_reports_tab_export_content_bottom', array( $this, 'show_export_options' ) );
 		add_action( 'edd_unshipped_orders_export',           array( $this, 'do_export' ) );
 	}

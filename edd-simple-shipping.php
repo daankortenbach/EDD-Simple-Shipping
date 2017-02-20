@@ -101,7 +101,6 @@ class EDD_Simple_Shipping {
 		add_action( 'edd_view_order_details_billing_after',  array( $this, 'show_shipping_details' ), 10 );
 		add_action( 'edd_insert_payment',                    array( $this, 'set_as_not_shipped' ), 10, 2 );
 		add_action( 'edd_edit_payment_bottom',               array( $this, 'edit_payment_option' ) );
-		add_action( 'edd_payments_table_do_bulk_action',     array( $this, 'process_bulk_actions' ), 10, 2 );
 
 		add_action( 'edd_profile_editor_address',            array( $this, 'profile_editor_addresses' ), 10 );
 		add_action( 'edd_profile-remove-shipping-address',   array( $this, 'process_profile_editor_remove_address' ) );
