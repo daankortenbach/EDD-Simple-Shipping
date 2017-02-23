@@ -441,7 +441,7 @@ class EDD_Simple_Shipping {
 
 		foreach( $cart_contents as $key => $item ) {
 
-			$price_id = isset( $item['options']['price_id'] ) ? (int) $item['options']['price_id'] : null;
+			$price_id = isset( $item['item_number']['options']['price_id'] ) ? (int) $item['item_number']['options']['price_id'] : null;
 
 			if( ! $this->item_has_shipping( $item['id'], $price_id ) ) {
 				continue;
