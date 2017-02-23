@@ -431,7 +431,7 @@ class EDD_Simple_Shipping {
 			return;
 		}
 
-		$cart_contents = edd_get_cart_contents();
+		$cart_contents = edd_get_cart_content_details();
 
 		if( ! is_array( $cart_contents ) ) {
 			return;
