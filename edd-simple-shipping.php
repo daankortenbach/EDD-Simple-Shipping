@@ -592,6 +592,7 @@ class EDD_Simple_Shipping {
 		ob_start();
 		?>
 		<script type="text/javascript">var edd_global_vars; jQuery(document).ready(function($) {
+
 				$('body').on('change', 'select[name=shipping_country],select[name=billing_country]',function() {
 
 					var billing = true;
@@ -614,101 +615,79 @@ class EDD_Simple_Shipping {
 						$('#shipping_state_other').show();$('#shipping_state_us').hide();$('#shipping_state_ca').hide();
 					}
 
-					var postData = {
-						action: 'edd_get_shipping_rate',
-						country:  val
-					};
-
-					$.ajax({
-						type: "POST",
-						data: postData,
-						dataType: "json",
-						url: edd_global_vars.ajaxurl,
-						success: function (response) {
-							$('#edd_checkout_cart').replaceWith(response.html);
-							$('.edd_cart_amount').each(function() {
-								$(this).text(response.total);
-							});
-						}
-					}).fail(function (data) {
-						if ( window.console && window.console.log ) {
-							console.log( data );
-						}
-					});
+					edd_shipping_trigger_address_change( val );
 				});
 
 				$('body').on('edd_taxes_recalculated', function( event, data ) {
 
-					if( $('#edd_simple_shipping_show').is(':checked') )
+					if( $('#edd_simple_shipping_show').is(':checked') ) {
 						return;
+					}
 
-					var postData = {
-						action: 'edd_get_shipping_rate',
-						country: data.postdata.billing_country,
-						state: data.postdata.state
-					};
-					$.ajax({
-						type: "POST",
-						data: postData,
-						dataType: "json",
-						url: edd_global_vars.ajaxurl,
-						success: function (response) {
-							if( response ) {
-
-								$('#edd_checkout_cart').replaceWith(response.html);
-								$('.edd_cart_amount').each(function() {
-									$(this).text(response.total);
-								});
-
-							} else {
-								if ( window.console && window.console.log ) {
-									console.log( response );
-								}
-							}
-						}
-					}).fail(function (data) {
-						if ( window.console && window.console.log ) {
-							console.log( data );
-						}
-					});
+					edd_shipping_trigger_address_change( data.postdata.billing_country, data.postdata.state );
 
 				});
 
 				$('select#edd-gateway, input.edd-gateway').change( function (e) {
-					var postData = {
-						action: 'edd_get_shipping_rate',
-						country: 'US' // default
-					};
-					$.ajax({
-						type: "POST",
-						data: postData,
-						dataType: "json",
-						url: edd_global_vars.ajaxurl,
-						success: function (response) {
-							$('#edd_checkout_cart').replaceWith(response.html);
-							$('.edd_cart_amount').each(function() {
-								$(this).text(response.total);
-							});
-						}
-					}).fail(function (data) {
-						if ( window.console && window.console.log ) {
-							console.log( data );
-						}
-					});
+					edd_shipping_trigger_address_change( 'US' );
 				});
+
 				$('#edd_simple_shipping_show').change(function() {
 					$('#edd_simple_shipping_fields_wrap').toggle();
 				});
 
 				$('body').on('change', '.edd-existing-shipping-addresses', function() {
 					var existing_value = $(this).val();
-					var target = $('#edd-shipping-new-address-wrapper');
+					var target  = $('#edd-shipping-new-address-wrapper');
+					var country = false;
+
 					if ( 'new' === existing_value ) {
 						target.show();
+						if ( $( 'select.shipping-country' ).val().length ) {
+							country = $( 'select.shipping-country' ).val();
+						}
 					} else {
 						target.hide();
+						country = $(this).find(':selected').data('country');
+					}
+
+					if ( false !== country ) {
+						edd_shipping_trigger_address_change( country );
 					}
 				});
+
+				/**
+				 * Given a country and state, trigger an update of the shipping charges
+				 * @param country
+				 * @param state
+				 */
+				function edd_shipping_trigger_address_change( country = '', state = '' ) {
+						var postData = {
+							action: 'edd_get_shipping_rate',
+							country:  country
+						};
+
+						if ( state != '' ) {
+							postData.state = state;
+						}
+
+						$.ajax({
+							type: "POST",
+							data: postData,
+							dataType: "json",
+							url: edd_global_vars.ajaxurl,
+							success: function (response) {
+								$('#edd_checkout_cart').replaceWith(response.html);
+								$('.edd_cart_amount').each(function() {
+									$(this).text(response.total);
+								});
+							}
+						}).fail(function (data) {
+							if ( window.console && window.console.log ) {
+								console.log( data );
+							}
+						});
+				}
 			});</script>
 
 		<div id="edd_simple_shipping">
@@ -752,18 +731,12 @@ class EDD_Simple_Shipping {
 					<?php $options['new'] = __( 'Add new address', 'edd-simple-shipping' ); ?>
 					<div class="edd-existing-shipping-addresses-wrapper">
 						<p>
-						<?php
-							echo EDD()->html->select(
-								array(
-									'options'          => $options,
-									'name'             => 'existing_shipping_address',
-									'class'            => 'edd-existing-shipping-addresses',
-									'id'               => 'edd-existing-shipping-addresses',
-									'show_option_all'  => false,
-									'show_option_none' => false,
-								)
-							);
-						?>
+							<select name="existing_shipping_address" class="edd-select edd-existing-shipping-addresses" id="edd-existing-shipping-addresses">
+								<?php foreach ( $options as $key => $option ) : ?>
+									<?php $address_country = $existing_addresses[ $key ]['country']; ?>
+									<option value="<?php echo $key; ?>" data-country="<?php echo $address_country; ?>"><?php echo $option; ?></option>
+								<?php endforeach; ?>
+							</select>
 						</p>
 					</div>
 					<?php endif; ?>
