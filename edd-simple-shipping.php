@@ -214,6 +214,11 @@ class EDD_Simple_Shipping {
 			require_once $this->plugin_path . '/includes/integrations/edd-fes.php';
 			$this->fes = new EDD_Simple_Shipping_FES();
 
+
+			if ( ! isset( $this->admin ) ) {
+				require_once $this->plugin_path . '/includes/admin/admin.php';
+				$this->admin = new EDD_Simple_Shipping_Admin();
+			}
 			add_action( 'fes-order-table-column-title', array( $this->admin, 'shipped_column_header' ), 10 );
 			add_action( 'fes-order-table-column-value', array( $this->admin, 'shipped_column_value' ), 10 );
 
