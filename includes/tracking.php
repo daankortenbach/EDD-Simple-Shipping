@@ -133,7 +133,7 @@ class EDD_Simple_Shipping_Tracking {
 		</td>
 
 		<td>
-			<button class="edd_remove_repeatable" data-type="price" style="background: url(<?php echo admin_url('/images/xit.gif'); ?>) no-repeat;"><span class="screen-reader-text"><?php printf( __( 'Remove tracking ID %s', 'edd-simple-shipping' ), $value ); ?></span><span aria-hidden="true">&times;</span></button>
+			<button class="edd_remove_repeatable" data-type="price" style="background: url(<?php echo admin_url('/images/xit.gif'); ?>) no-repeat;"><span class="screen-reader-text"><?php printf( __( 'Remove tracking ID %s', 'edd-simple-shipping' ), $args['tracking_id'] ); ?></span><span aria-hidden="true">&times;</span></button>
 		</td>
 		<?php
 	}
