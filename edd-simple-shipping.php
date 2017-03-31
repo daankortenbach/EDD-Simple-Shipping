@@ -504,7 +504,7 @@ class EDD_Simple_Shipping {
 					'label'       => $fee_label,
 					'id'          => 'simple_shipping_' . $key,
 					'download_id' => $item['id'],
-					'price_id'	  => isset( $item['options']['price_id'] ) ? $item['options']['price_id'] : null
+					'price_id'	  => $price_id
 				) );
 
 			}
