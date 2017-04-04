@@ -147,7 +147,7 @@ class EDD_Simple_Shipping_Tracking {
 	 * @return void
 	 */
 	public function save_edited_payment( $payment_id ) {
-		$tracking_ids = $_POST['edd_tracking_ids'];
+		$tracking_ids = isset( $_POST['edd_tracking_ids'] ) ? $_POST['edd_tracking_ids'] : array();
 
 		foreach ( $tracking_ids as $key => $tracking_id ) {
 			if ( empty( $tracking_id['tracking_id'] ) ) {
