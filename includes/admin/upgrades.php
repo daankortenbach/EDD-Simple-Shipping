@@ -80,13 +80,13 @@ function edd_ss_customer_address_upgrade() {
 	if( $payments ) {
 		foreach( $payments as $payment ) {
 
-			$user_info  = edd_get_payment_meta_user_info( $payment );
+			$payment   = new EDD_Payment( $payment );
+			$user_info = $payment->user_info;
 			if ( ! isset( $user_info['shipping_info'] ) ) {
 				continue;
 			}
 
-			$customer_id = edd_get_payment_customer_id( $payment );
-			edd_simple_shipping()->add_customer_shipping_address( $customer_id, $user_info['shipping_info'] );
+			edd_simple_shipping()->add_customer_shipping_address( $payment->customer_id, $user_info['shipping_info'] );
 
 		}
 
