@@ -736,11 +736,11 @@ class EDD_Simple_Shipping {
 					<div class="edd-existing-shipping-addresses-wrapper">
 						<p>
 							<select name="existing_shipping_address" class="edd-select edd-existing-shipping-addresses" id="edd-existing-shipping-addresses">
-								<option value="new"><?php _e( 'Add new address', 'edd-simple-shipping' ); ?></option>
 								<?php foreach ( $options as $key => $option ) : ?>
 									<?php $address_country = $existing_addresses[ $key ]['country']; ?>
 									<option value="<?php echo $key; ?>" data-country="<?php echo $address_country; ?>"><?php echo $option; ?></option>
 								<?php endforeach; ?>
+								<option value="new"><?php _e( 'Add new address', 'edd-simple-shipping' ); ?></option>
 							</select>
 						</p>
 					</div>
