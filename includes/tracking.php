@@ -12,7 +12,6 @@ class EDD_Simple_Shipping_Tracking {
 	 *
 	 * @since 2.3
 	 *
-	 * @return false;
 	 */
 	public function __construct() {
 		add_action( 'edd_view_order_details_billing_after', array( $this, 'payment_tracking' ) );
@@ -361,7 +360,7 @@ class EDD_Simple_Shipping_Tracking {
 	public function order_details_header() {
 		?>
 		<th class="edd_purchase_tracking"><?php _e( 'Shipping', 'edd-tracking-info' ); ?></th>
-		<?
+		<?php
 	}
 
 	/**
@@ -372,6 +371,7 @@ class EDD_Simple_Shipping_Tracking {
 	 * @return void
 	 */
 	public function order_details_row( $payment_id, $purchase_data ) {
+		ob_start();
 		$tracking_ids   = $this->get_payment_tracking( $payment_id );
 		$needs_shipping = edd_simple_shipping()->payment_needs_shipping( $payment_id );
 		$payment_status = edd_get_payment_status( $payment_id );
@@ -389,6 +389,7 @@ class EDD_Simple_Shipping_Tracking {
 			<?php endif; ?>
 			</td>
 		<?php
+		echo ob_get_clean();
 	}
 
 	/**
