@@ -1537,6 +1537,8 @@ function edd_simple_shipping_install() {
 
 	$current_version = get_option( 'edd_simple_shipping_version' );
 
+	edd_simple_shipping(); // Initialize the plugin itself so that constants are defined
+
 	if ( ! $current_version ) {
 
 		require_once untrailingslashit( plugin_dir_path( __FILE__ ) ) . '/includes/admin/upgrades.php';
