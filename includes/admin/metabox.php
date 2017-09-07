@@ -112,11 +112,13 @@ class EDD_Simple_Shipping_Metabox {
 	public function save_payment( $payment_id = 0 ) {
 
 		$address = isset( $_POST['edd-payment-shipping-address'] ) ? $_POST['edd-payment-shipping-address'] : false;
-		if( ! $address )
+		if( ! $address ) {
 			return;
+		}
+
 
 		$meta      = edd_get_payment_meta( $payment_id );
-		$user_info = maybe_unserialize( $meta['user_info'] );
+		$user_info = $meta['user_info'];
 
 		$user_info['shipping_info'] = $address[0];
 
