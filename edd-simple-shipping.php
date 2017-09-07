@@ -3,7 +3,7 @@
 Plugin Name: Easy Digital Downloads - Simple Shipping
 Plugin URI: https://easydigitaldownloads.com/downloads/simple-shipping
 Description: Provides the ability to charge simple shipping fees for physical products in EDD
-Version: 2.3.3
+Version: 2.3.4
 Author: Easy Digital Downloads
 Author URI:  https://easydigitaldownloads.com
 Contributors: easydigitaldownloads, mordauk, cklosows
@@ -81,7 +81,7 @@ class EDD_Simple_Shipping {
 
 	private function setup_constants() {
 		if ( ! defined( 'EDD_SIMPLE_SHIPPING_VERSION' ) ) {
-			define( 'EDD_SIMPLE_SHIPPING_VERSION', '2.3.3' );
+			define( 'EDD_SIMPLE_SHIPPING_VERSION', '2.3.4' );
 		}
 	}
 
@@ -1154,13 +1154,14 @@ class EDD_Simple_Shipping {
 	 */
 	public function admin_sales_notice( $email = '', $payment_id = 0, $payment_data = array() ) {
 
-		$shipped = get_post_meta( $payment_id, '_edd_payment_shipping_status', true );
+		$payment = new EDD_Payment( $payment_id );
+		$shipped = $payment->get_meta( '_edd_payment_shipping_status' );
+
 
 		// Only modify the email if shipping info needs to be added
 		if( '1' == $shipped ) {
 
-			$user_info     = maybe_unserialize( $payment_data['user_info'] );
-			$shipping_info = $user_info['shipping_info'];
+			$shipping_info = $payment->user_info['shipping_info'];
 
 			$email .= "<p><strong>" . __( 'Shipping Details:', 'edd-simple-shipping' ) . "</strong></p>";
 			$email .= __( 'Address:', 'edd-simple-shipping' ) . " " . $shipping_info['address'] . "<br/>";

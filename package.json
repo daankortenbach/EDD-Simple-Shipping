@@ -1,6 +1,6 @@
 {
   "name": "edd-simple-shipping",
-  "version": "2.3.3",
+  "version": "2.3.4",
   "private": true,
   "devDependencies": {
     "grunt": "^1.0.1",
