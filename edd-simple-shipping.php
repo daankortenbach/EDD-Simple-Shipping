@@ -669,7 +669,8 @@ class EDD_Simple_Shipping {
 				function edd_shipping_trigger_address_change( country = '', state = '' ) {
 						var postData = {
 							action: 'edd_get_shipping_rate',
-							country:  country
+							country: country,
+							billing_country: country
 						};
 
 						if ( state != '' ) {
